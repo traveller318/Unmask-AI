@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif, Inter;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 84% 4.9%;
+    --primary: 220 76% 36%;
+    --primary-foreground: 355 100% 100%;
+    --secondary: 217 76% 97%;
+    --secondary-foreground: 220 76% 36%;
+    --muted: 217 76% 97%;
+    --muted-foreground: 220 16.3% 46.9%;
+    --accent: 217 76% 97%;
+    --accent-foreground: 220 76% 36%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 31.8% 91.4%;
+    --input: 220 31.8% 91.4%;
+    --ring: 220 76% 36%;
+    --chart-1: 220 76% 36%;
+    --chart-2: 230 58% 39%;
+    --chart-3: 217 37% 24%;
+    --chart-4: 225 74% 66%;
+    --chart-5: 215 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.9%;
+    --chart-1: 0 0% 50%;
+    --chart-2: 0 0% 40%;
+    --chart-3: 0 0% 60%;
+    --chart-4: 0 0% 30%;
+    --chart-5: 0 0% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .perspective-4000 {
+    perspective: 4000px;
+  }
+  
+  .perspective-origin-100-0 {
+    perspective-origin: 100% 0;
+  }
+  
+  .bg-gradient-radial {
+    background-image: radial-gradient(var(--tw-gradient-stops));
+  }
+  
+  /* Add glass reflection effect */
+  .glass-reflection {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0) 100%
+    );
+  }
+}
