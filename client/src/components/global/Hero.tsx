@@ -1,19 +1,19 @@
-import React from 'react'
-import { Button } from '../ui/button'
-import HeroVideoDialog from '../magicui/hero-video-dialog'
+"use client";
+
+import React from "react";
+import { Button } from "../ui/button";
+import HeroVideoDialog from "../magicui/hero-video-dialog";
+import { useRouter } from "next/navigation";
 
 const Hero = () => {
+  const router = useRouter();
   return (
     <div className="relative pt-36 min-h-[85vh] w-full bg-white bg-grid-black/[0.2] flex flex-col items-center justify-center">
       {/* Radial gradient background */}
       <div className="absolute pointer-events-none inset-0 flex items-center justify-center bg-white [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
 
-      
-
       {/* Main content */}
       <div className="relative z-10 container mx-auto px-4 text-center">
-       
-        
         {/* Headline */}
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-600">
           Deploy your website
@@ -23,12 +23,12 @@ const Hero = () => {
 
         {/* Subheading */}
         <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-10">
-          With our state of the art, cutting edge, we are so back kinda
-          hosting services, you can deploy your website in seconds.
+          With our state of the art, cutting edge, we are so back kinda hosting
+          services, you can deploy your website in seconds.
         </p>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        {/* <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
             className="bg-gradient-to-r from-blue-500 to-blue-700 text-white hover:opacity-90 px-8 py-6 text-lg shadow-lg shadow-green-500/25 transition-all duration-200"
           >
@@ -39,6 +39,14 @@ const Hero = () => {
             className="bg-white/80 backdrop-blur-sm text-black border-2 border-gray-200 hover:bg-gray-50 px-8 py-6 text-lg"
           >
             Book a call
+          </Button>
+        </div> */}
+        <div className="flex justify-center">
+          <Button
+            className="bg-gradient-to-r from-blue-500 to-blue-700 text-white hover:opacity-90 px-8 py-6 text-lg shadow-lg shadow-green-500/25 transition-all duration-200"
+            onClick={() => router.push("/dashboard")}
+          >
+            Go to Dashboard
           </Button>
         </div>
 
@@ -54,10 +62,8 @@ const Hero = () => {
           />
         </div>
       </div>
-
-      
     </div>
-  )
-}
+  );
+};
 
-export default Hero
+export default Hero;

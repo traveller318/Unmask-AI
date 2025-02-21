@@ -1,29 +1,31 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import Image from "next/image"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { Button } from "../ui/button";
 
 interface SimpleDropdownItem {
-  title: string
-  description: string
+  title: string;
+  description: string;
 }
 
 interface NavigationItem {
-  title: string
-  href: string
+  title: string;
+  href: string;
 }
 
 interface SectionDropdownItem {
-  section: string
-  items: NavigationItem[]
+  section: string;
+  items: NavigationItem[];
 }
 
-type DropdownItem = SimpleDropdownItem | SectionDropdownItem
+type DropdownItem = SimpleDropdownItem | SectionDropdownItem;
 
 interface NavItem {
-  title: string
-  dropdownItems: DropdownItem[]
+  title: string;
+  dropdownItems: DropdownItem[];
 }
 
 const NavItems: NavItem[] = [
@@ -67,24 +69,29 @@ const NavItems: NavItem[] = [
     title: "For Developers",
     dropdownItems: [],
   },
-]
+];
 
 export default function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false)
+  const router = useRouter();
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0)
-    }
+      setIsScrolled(window.scrollY > 0);
+    };
 
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-      isScrolled ? "bg-white/80 backdrop-blur-md border-b border-gray-200" : ""
-    }`}>
+    <nav
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        isScrolled
+          ? "bg-white/80 backdrop-blur-md border-b border-gray-200"
+          : ""
+      }`}
+    >
       <div className="max-w-[1300px] mx-auto">
         <div className="flex items-center justify-between h-16 px-6">
           {/* Logo */}
@@ -112,30 +119,33 @@ export default function Navbar() {
 
           {/* Auth Buttons */}
           <div className="flex items-center gap-4">
-            <Link href="/login" className="hidden md:block text-sm text-gray-600 hover:text-gray-900">
-              Log in
-            </Link>
-            <Link 
-              href="/signup"
+            <Button
+              onClick={() => router.push("/dashboard")}
               className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Sign up
-            </Link>
+              Dashboard
+            </Button>
           </div>
         </div>
       </div>
     </nav>
-  )
+  );
 }
 
 // NavLink component for consistent styling
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+function NavLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
   return (
-    <Link 
-      href={href} 
+    <Link
+      href={href}
       className="text-sm text-gray-600 hover:text-blue-600 transition-colors font-inter"
     >
       {children}
     </Link>
-  )
+  );
 }

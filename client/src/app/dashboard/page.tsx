@@ -1,104 +1,189 @@
-import { createClient } from '@/utils/supabase/server'
-import { SignOutButton } from '@/components/SignOutButton'
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardHeader, CardContent } from "@/components/ui/card"
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu"
-import { Bell, Settings, User, Mail, Shield } from 'lucide-react'
-import { Button } from "@/components/ui/button"
+"use client";
+import React, { useState, useRef } from 'react';
+import { FiUploadCloud } from 'react-icons/fi';
+import { BsImage, BsCameraVideo, BsTrash } from 'react-icons/bs';
 
-async function Dashboard() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return null // Handle this case in middleware
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation Bar */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger>
-                  <Bell className="h-5 w-5 text-gray-500" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                  <DropdownMenuItem>No new notifications</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <SignOutButton />
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* User Profile Card */}
-            <Card className="col-span-2">
-              <CardHeader className="flex flex-row items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={`https://avatar.vercel.sh/${user.email}`} />
-                  <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="text-2xl font-bold">{user.email}</h2>
-                  <p className="text-sm text-gray-500">Account created on {new Date(user.created_at).toLocaleDateString()}</p>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-5 w-5 text-gray-500" />
-                    <span>{user.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-gray-500" />
-                    <span>Email {user.email_confirmed_at ? 'verified' : 'not verified'}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions Card */}
-            <Card>
-              <CardHeader>
-                <h3 className="text-lg font-semibold">Quick Actions</h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button variant="outline" className="w-full justify-start">
-                  <User className="mr-2 h-4 w-4" />
-                  Edit Profile
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Account Settings
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </main>
-    </div>
-  )
+interface FilePreview {
+  url: string;
+  type: 'image' | 'video';
+  file: File;
 }
 
-export default Dashboard
+const DashboardPage = () => {
+  const [dragActive, setDragActive] = useState(false);
+  const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleFile = (file: File) => {
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    
+    if (!isImage && !isVideo) {
+      alert('Please upload only image or video files');
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    setFilePreview({
+      url,
+      type: isImage ? 'image' : 'video',
+      file
+    });
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+  };
+
+  const handleSubmit = () => {
+    if (!filePreview) return;
+    // Add your submission logic here
+    console.log(`Submitting ${filePreview.type}:`, filePreview.file);
+  };
+
+  const clearPreview = () => {
+    if (filePreview) {
+      URL.revokeObjectURL(filePreview.url);
+      setFilePreview(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-8">
+      <h1 className="text-4xl font-bold text-blue-600 mb-6 text-center">
+        DeepFake Detection Dashboard
+      </h1>
+      
+      <div className="max-w-4xl mx-auto">
+        {!filePreview ? (
+          <div 
+            className={`
+              border-2 border-dashed rounded-2xl p-12
+              ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-blue-200'}
+              transition-all duration-300 ease-in-out
+              hover:border-blue-400 hover:bg-blue-50/50
+            `}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+          >
+            <div className="flex flex-col items-center justify-center space-y-8">
+              <div className="animate-bounce"></div>
+                <FiUploadCloud size="5rem" color="#3B82F6" />
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-semibold text-gray-700">
+                  Drag and drop your file here
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  or select a file type below
+                </p>
+              </div>
+
+              <div className="flex gap-8 mt-8 justify-evenly ">
+                <div 
+                  onClick={() => imageInputRef.current?.click()}
+                  className="flex flex-col items-center p-8 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all cursor-pointer border border-blue-100 hover:border-blue-300"
+                >
+                  <BsImage size="2.5rem" color="#2563EB" />
+                  <span className="mt-3 text-lg font-medium text-blue-600">Images</span>
+                  <span className="text-sm text-gray-500 mt-1">JPG, PNG, GIF</span>
+                </div>
+
+                <div 
+                  onClick={() => videoInputRef.current?.click()}
+                  className="flex flex-col items-center p-8 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all cursor-pointer border border-blue-100 hover:border-blue-300"
+                >
+                  <BsCameraVideo size="2.5rem" color="#2563EB" />
+                  <span className="mt-3 text-lg font-medium text-blue-600">Videos</span>
+                  <span className="text-sm text-gray-500 mt-1">MP4, MOV, AVI</span>
+                </div>
+              </div>
+            </div>
+        ) : (
+          <div className="bg-white rounded-2xl p-8 shadow-lg">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-semibold text-gray-700">File Preview</h2>
+              <button 
+                onClick={clearPreview}
+                className="p-2 hover:bg-red-50 rounded-full transition-colors"
+              >
+                <BsTrash size="1.5rem" color="#EF4444" />
+              </button>
+            </div>
+            
+            <div className="flex justify-center mb-6">
+              {filePreview.type === 'image' ? (
+                <img 
+                  src={filePreview.url} 
+                  alt="Preview" 
+                  className="max-h-[400px] rounded-lg object-contain"
+                />
+              ) : (
+                <video 
+                  src={filePreview.url} 
+                  controls 
+                  className="max-h-[400px] rounded-lg"
+                />
+              )}
+            </div>
+
+            <button
+              onClick={handleSubmit}
+              className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Submit {filePreview.type === 'image' ? 'Image' : 'Video'}
+            </button>
+          </div>
+        )}
+
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <input
+          ref={videoInputRef}
+          type="file"
+          accept="video/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        <div className="mt-8 text-center">
+          <p className="text-sm text-gray-500">
+            Upload your media file to check if it's a deepfake.
+            <br />
+            We support various image and video formats.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DashboardPage;
