@@ -5,8 +5,33 @@ import io
 import cv2
 import numpy as np
 import mediapipe as mp
+import nbformat
+from nbconvert import PythonExporter
 
+def load_notebook_function(notebook_path, function_name):
+    with open(notebook_path) as f:
+        nb = nbformat.read(f, as_version=4)
+    exporter = PythonExporter()
+    source, _ = exporter.from_notebook_node(nb)
+    code = compile(source, notebook_path, 'exec')
+    namespace = {}
+    exec(code, namespace)
+    return namespace[function_name]
+
+analyze_video_sentiment = load_notebook_function('./senti.ipynb', 'analyze_video_sentiment')
+
+# Initialize Flask app
 app = Flask(__name__)
+
+@app.route('/analyze_sentiment', methods=['POST'])
+def analyze_sentiment():
+    if 'video' not in request.files:
+        return jsonify({'error': 'No video uploaded'}), 400
+
+    video_file = request.files['video']
+    result = analyze_video_sentiment(video_file)
+    return jsonify(result)
+
 
 # Add root route
 @app.route('/', methods=['GET'])
