@@ -10,6 +10,7 @@ body {
     width: 348px;
     height: 548px;
     border-radius: 1rem;
+    overflow: auto;
 }
 .card-header{
     margin: 0;
@@ -58,7 +59,7 @@ body {
     border: 1px solid rgba(147, 197, 253, 0.5);
     backdrop-filter: blur(16px);
     /* border-radius: 1rem; */
-    overflow: hidden;
+    /* overflow: auto; */
     box-shadow: 0 20px 70px -15px rgba(59, 130, 246, 0.25);
 }
 

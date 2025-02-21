@@ -3,10 +3,17 @@
     "name": "Deepfake Detector",
     "version": "1.0",
     "description": "Detect deepfakes in live video streams",
-    "action":{
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "tabCapture",
+        "tabs",
+        "desktopCapture"
+    ],
+    "action": {
         "default_popup": "popup.html"
     },
-    "permissions": [
-        "activeTab"
-    ]
+    "background": {
+        "service_worker": "background.js"
+    }
 }
