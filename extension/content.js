@@ -31,16 +31,23 @@ function stopRecording() {
 
 function saveRecording() {
   const blob = new Blob(recordedChunks, { type: "video/webm" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "screen_recording.webm";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-
-  console.log("Recording saved.");
+  
+  // Send the blob to background script for download
+  const reader = new FileReader();
+  reader.onload = () => {
+    const buffer = reader.result;
+    chrome.runtime.sendMessage({
+      action: "download",
+      data: {
+        url: buffer,
+        filename: `screen_recording_${new Date().getTime()}.webm`
+      }
+    });
+  };
+  reader.readAsDataURL(blob);
+  
+  // Clear the recorded chunks
+  recordedChunks = [];
 }
 
 chrome.runtime.onMessage.addListener((message) => {

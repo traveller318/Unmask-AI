@@ -482,30 +482,30 @@ const DashboardPage = () => {
       
       <div className="max-w-4xl mx-auto">
         {!filePreview ? (
-          <div 
-            className={`
+        <div 
+          className={`
               border-2 border-dashed rounded-2xl p-12
-              ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-blue-200'}
-              transition-all duration-300 ease-in-out
+            ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-blue-200'}
+            transition-all duration-300 ease-in-out
               hover:border-blue-400 hover:bg-blue-50/50
-            `}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-          >
+          `}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
             <div className="flex flex-col items-center justify-center space-y-8">
               <div className="animate-bounce"></div>
                 <FiUploadCloud size="5rem" color="#3B82F6" />
               </div>
-              <div className="text-center">
+            <div className="text-center">
                 <p className="text-2xl font-semibold text-gray-700">
-                  Drag and drop your file here
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
+                Drag and drop your file here
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
                   or select a file type below
-                </p>
-              </div>
+              </p>
+            </div>
 
               <div className="flex gap-8 mt-8 justify-evenly ">
                 <div 
@@ -542,7 +542,7 @@ const DashboardPage = () => {
                   <BsTrash size="1.5rem" color="#EF4444" />
                 </button>
               </div>
-              
+
               <div className="flex justify-center mb-6">
                 {filePreview.type === 'image' ? (
                   <img 
@@ -567,7 +567,7 @@ const DashboardPage = () => {
                   Analyze {filePreview.type === 'image' ? 'Image' : 'Video'}
                 </button>
               )}
-            </div>
+        </div>
             
             {isAnalyzing && renderAnalyzing()}
             {analysisComplete && renderAnalysisResults()}
