@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <!-- <meta http-equiv="X-UA-Compatible" content="IE=edge"> -->
+  <meta http-equiv="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deepfake Detector Overlay</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+    
+
+  </style>
+</head>
+
+<body>
+  <div class="fixed-container" style="font-family: 'Poppins';width: 100%; height: 100%;">
+    <!-- Background blur and shadow container -->
+    <div class="background-blur"></div>
+    <div class="gradient-pulse"></div>
+
+    <div class="card">
+      <!-- Side gradients -->
+      <div class="side-gradient left"></div>
+      <div class="side-gradient right"></div>
+
+      <!-- Top gradient overlay -->
+      <div class="top-gradient-overlay"></div>
+
+      <div class="card-header">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shield-icon">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          Deepfake Detector
+        </div>
+        <div id="analysis-status" class="analysis-status">
+          <button id="analyze-button" class="analyze-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="camera-icon">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M14.31 8l5.74 9.94M9.69 8h11.48M8 12l5.74-9.94M14.31 16H6.69"></path>
+            </svg>
+            Analyze Stream
+          </button>
+        </div>
+      </div>
+
+      <div class="card-content">
+        <div id="high-risk-alert" class="alert hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="alert-icon">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <div class="alert-text">
+            <div class="alert-title">High Risk Detected</div>
+            <div class="alert-description">This stream shows strong indicators of being AI-generated</div>
+          </div>
+        </div>
+
+        <div class="confidence-section">
+          <div class="confidence-header">
+            <span class="label">Deepfake Confidence</span>
+            <span id="confidence-value" class="value">78%</span>
+          </div>
+          <div class="progress-bar">
+            <div id="confidence-progress" class="progress-fill"
+              style="width: 78%; background: linear-gradient(to right, #ef4444, #b91c1c);"></div>
+          </div>
+        </div>
+
+        <div class="detailed-analysis">
+          <h3 class="section-title">Detailed Analysis</h3>
+          <div class="metrics-container">
+            <div class="metric">
+              <span class="label">Face Distortion</span>
+              <span class="value" style="color: #d97706;">65%</span>
+            </div>
+            <div class="metric">
+              <span class="label">Lip-Sync Deviation</span>
+              <span class="value" style="color: #ef4444;">82%</span>
+            </div>
+            <div class="metric">
+              <span class="label">Frame Consistency</span>
+              <span class="value" style="color: #facc15;">71%</span>
+            </div>
+            <div class="metric">
+              <span class="label">Audio-Video Mismatch</span>
+              <span class="value" style="color: #facc15;">75%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom gradient overlay -->
+      <div class="bottom-gradient-overlay"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

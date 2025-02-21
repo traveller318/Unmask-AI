@@ -1,0 +1,38 @@
+{
+    "manifest_version": 3,
+    "name": "Deepfake Detector",
+    "version": "1.0",
+    "description": "Detect deepfakes in live video streams",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "tabs"
+    ],
+    "host_permissions": [
+        "*://*.youtube.com/*",
+        "*://*.twitch.tv/*",
+        "*://*.facebook.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*.youtube.com/*",
+                "*://*.twitch.tv/*",
+                "*://*.facebook.com/*"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
+    "action": {
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    }
+}
