@@ -89,12 +89,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveRecording() {
     const blob = new Blob(recordedChunks, { type: "video/webm" });
     const url = URL.createObjectURL(blob);
-    
+
+    // Auto-download without user action
     const a = document.createElement("a");
     a.href = url;
-    a.download = "recorded-screen.webm";
+    a.download = "recorded-screen.webm"; // Change filename if needed
     document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    
     URL.revokeObjectURL(url);
   }
 
