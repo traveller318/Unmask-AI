@@ -1,4 +1,5 @@
 import json
+import os
 
 # Define the path for the results.json file
 results_file_path = 'results.json'
@@ -27,7 +28,24 @@ try:
         (total_abnormal_frames_detected / (total_frames_processed * beta)) +
         (mismatch_score + euclidean_distance) / (gamma)
     ) * 100
- 
+
+    results_data = {
+        'confidence_score': confidence_score
+    }
+
+    if os.path.exists(results_file_path) and os.path.getsize(results_file_path) > 0:
+        with open(results_file_path, 'r') as file:
+            existing_data = json.load(file)
+        # Update the existing data with new results
+        existing_data.update(results_data)
+        results_data = existing_data
+    
+    # Write the results to the file
+    with open(results_file_path, 'w') as file:
+        json.dump(results_data, file, indent=4)
+    
+    print(f"Results saved to {results_file_path}: {results_data}")
+
     # Print the confidence score
     print(f"Confidence Score: {confidence_score}")
 

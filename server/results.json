@@ -7,5 +7,6 @@
     "cosine_similarity": -0.05,
     "mismatch_score": 1.05,
     "euclidean_distance": 1.45,
-    "analysis_result": "High mismatch detected. Audio and visual content are inconsistent."
+    "analysis_result": "High mismatch detected. Audio and visual content are inconsistent.",
+    "confidence_score": 63.16666666666667
 }
