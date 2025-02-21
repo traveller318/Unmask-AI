@@ -4,43 +4,43 @@ from PIL import Image
 import io
 import cv2
 import numpy as np
-import dlib
+import mediapipe as mp
 
 app = Flask(__name__)
+
+# Add root route
+@app.route('/', methods=['GET'])
+def hello():
+    return jsonify({"message": "Hello, working!"})
 
 # Load deepfake detection model
 pipe = pipeline("image-classification", model="prithivMLmods/Deep-Fake-Detector-Model")
 
-# Load dlib face detector and landmark predictor
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")  # Pre-trained model
+# Initialize MediaPipe FaceMesh
+mp_face_mesh = mp.solutions.face_mesh
+face_mesh = mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, refine_landmarks=True)
 
 def calculate_face_distortion(image):
-    """Detects facial landmarks and calculates distortion score."""
-    gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
-    faces = detector(gray)
+    """Detects facial landmarks using MediaPipe FaceMesh and calculates distortion score."""
+    image_rgb = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    results = face_mesh.process(image_rgb)
 
-    if len(faces) == 0:
+    if not results.multi_face_landmarks:
         return {"error": "No face detected"}
 
     distortions = []
-    for face in faces:
-        landmarks = predictor(gray, face)
-        
-        # Convert landmarks to a NumPy array
-        points = np.array([(landmarks.part(n).x, landmarks.part(n).y) for n in range(68)])
+    for face_landmarks in results.multi_face_landmarks:
+        points = np.array([[lm.x, lm.y] for lm in face_landmarks.landmark])
 
-        # Compute facial symmetry (example: difference between left and right eye distances)
-        left_eye_dist = np.linalg.norm(points[42] - points[45])  # Right eye corner distances
-        right_eye_dist = np.linalg.norm(points[36] - points[39])  # Left eye corner distances
+        # Example: Eye symmetry and jaw symmetry calculations
+        left_eye_dist = np.linalg.norm(points[133] - points[159])  # Right eye corner distances
+        right_eye_dist = np.linalg.norm(points[362] - points[386])  # Left eye corner distances
         eye_symmetry = abs(left_eye_dist - right_eye_dist)
 
-        # Compute jaw asymmetry (example: left vs right jaw points)
-        jaw_left = np.linalg.norm(points[0] - points[8])
-        jaw_right = np.linalg.norm(points[16] - points[8])
+        jaw_left = np.linalg.norm(points[234] - points[152])
+        jaw_right = np.linalg.norm(points[454] - points[152])
         jaw_symmetry = abs(jaw_left - jaw_right)
 
-        # Overall distortion score (higher means more distortion)
         distortion_score = eye_symmetry + jaw_symmetry
 
         distortions.append({
@@ -79,4 +79,5 @@ def detect_deepfake():
     return jsonify(response)  # Return results as JSON
 
 if __name__ == '__main__':
+    print("🚀 Server is running at http://127.0.0.1:5000/")
     app.run(debug=True)
