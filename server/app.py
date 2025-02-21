@@ -5,6 +5,15 @@ import io
 import cv2
 import numpy as np
 import mediapipe as mp
+import tensorflow as tf
+import os
+import cv2
+import numpy as np
+import tensorflow as tf
+from flask import Flask, request, jsonify
+from keras.models import load_model
+from werkzeug.utils import secure_filename
+
 
 app = Flask(__name__)
 
@@ -78,6 +87,123 @@ def detect_deepfake():
 
     return jsonify(response)  # Return results as JSON
 
+# Allowed file extensions for videos
+ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
+
+# Meso4 Model Class
+class Meso4:
+    def __init__(self, model_path, weights_path):
+        # Load the model architecture (.keras) and weights (.h5)
+        self.model = load_model(model_path)  # Load the pre-trained model
+        self.model.load_weights(weights_path)  # Load weights from .h5 file
+        self.model.compile(
+            optimizer='adam',
+            loss='binary_crossentropy',
+            metrics=['accuracy']
+        )
+
+    def predict_frame(self, frame):
+        # Preprocess the frame (resize, normalize, etc.)
+        frame_resized = tf.image.resize(frame, (112, 112))  # Resize to match model input
+        frame_resized = frame_resized / 255.0  # Normalize
+        frame_resized = np.expand_dims(frame_resized, axis=0)  # Add batch dimension
+        
+        prediction = self.model.predict(frame_resized)
+        return prediction[0][0]
+
+    def process_video(self, video_path):
+        # Open video
+        cap = cv2.VideoCapture(video_path)
+        
+        if not cap.isOpened():
+            print("Error: Could not open video file.")
+            return []
+
+        deepfake_count = 0
+        total_frames = 0
+        predictions = []
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("Error: Failed to read a frame or end of video.")
+                break  # Break out of the loop if no more frames are read
+
+            total_frames += 1
+            print(f"Processing frame {total_frames}...")
+
+            # Preprocess frame
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Convert frame to RGB
+            prediction = self.predict_frame(frame_rgb)
+
+            predictions.append(prediction)
+
+            if prediction > 0.7:
+                deepfake_count += 1
+
+        cap.release()
+
+        if total_frames == 0:
+            print("No frames were processed.")
+            return []
+
+        # Output the results
+        print(f"Total Frames: {total_frames}")
+        print(f"Deepfake Frames: {deepfake_count}")
+        print(f"Non-Deepfake Frames: {total_frames - deepfake_count}")
+        
+        deepfake_percentage = (deepfake_count / total_frames) * 100
+        print(f"Percentage of Deepfake Frames: {deepfake_percentage:.2f}%")
+        
+        return predictions
+
+# Flask route to upload video and get predictions
+@app.route('/upload_video', methods=['POST'])
+def upload_video():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    if file and allowed_file(file.filename):
+        # Secure the filename and save the file
+        filename = secure_filename(file.filename)
+        video_path = os.path.join('uploads', filename)
+        file.save(video_path)
+        
+        # Process the video and get predictions
+        predictions = model.process_video(video_path)
+        
+        # Calculate total deepfake percentage
+        total_frames = len(predictions)
+        deepfake_count = sum(1 for pred in predictions if pred > 0.5)
+        deepfake_percentage = (deepfake_count / total_frames) * 100 if total_frames > 0 else 0
+
+        return jsonify({
+            'total_frames': total_frames,
+            'deepfake_frames': deepfake_count,
+            'non_deepfake_frames': total_frames - deepfake_count,
+            'deepfake_percentage': deepfake_percentage
+        }), 200
+    else:
+        return jsonify({'error': 'Invalid file type. Only MP4, AVI, MOV, MKV are allowed.'}), 400
+
+# Helper function to check allowed file extensions
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 if __name__ == '__main__':
-    print("🚀 Server is running at http://127.0.0.1:5000/")
-    app.run(debug=True)
+    # Create uploads directory if it doesn't exist
+    os.makedirs('uploads', exist_ok=True)
+    
+    # Load the pre-trained model and weights
+    model = Meso4(
+        model_path=r'C:\Users\Daksh\Desktop\thakur_hack_final\hackanova\Deepfake-detection\models\Meso4_DF_model.h5',
+        weights_path=r'C:\Users\Daksh\Desktop\thakur_hack_final\hackanova\Deepfake-detection\models\Meso4_DF.weights.h5'
+    )
+    
+    # Start Flask app
+    app.run(debug=True, host='0.0.0.0', port=5000)
