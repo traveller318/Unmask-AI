@@ -1,0 +1,11 @@
+{
+    "total_frames": 25,
+    "distorted_faces": 0,
+    "total_frames_processed": 25,
+    "total_abnormal_frames_detected": 1,
+    "face_detection_rate": 100.0,
+    "cosine_similarity": -0.05,
+    "mismatch_score": 1.05,
+    "euclidean_distance": 1.45,
+    "analysis_result": "High mismatch detected. Audio and visual content are inconsistent."
+}
