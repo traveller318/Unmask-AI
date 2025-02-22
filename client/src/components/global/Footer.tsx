@@ -11,10 +11,10 @@ export const Footer = () => {
           {/* Logo and Description */}
           <div className="col-span-1 md:col-span-2">
             <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
-              AutomateAI
+              AlphaWave
             </h3>
             <p className="mt-4 text-gray-600 max-w-sm">
-              Empowering your workflow with intelligent automation solutions. Transform the way you work with AI-powered tools.
+              Enhancing digital security with real-time deepfake detection. Protecting authenticity with AI-powered solutions.
             </p>
             <div className="flex gap-4 mt-6">
               <Link 
@@ -54,10 +54,10 @@ export const Footer = () => {
             <h4 className="font-semibold text-gray-800 mb-4">Contact</h4>
             <ul className="space-y-3">
               <li className="text-gray-600">
-                Email: hello@automateai.com
+                Email: hello@alphawaveai.com
               </li>
               <li className="text-gray-600">
-                Support: support@automateai.com
+                Support: support@alphawaveai.com
               </li>
               <li>
                 <Button 
@@ -78,7 +78,7 @@ export const Footer = () => {
         <div className="mt-16 pt-8 border-t border-blue-50">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-600 text-sm">
-              © 2024 AutomateAI. All rights reserved.
+              © 2024 AlphaWave. All rights reserved.
             </p>
             <div className="flex gap-6">
               <Link 

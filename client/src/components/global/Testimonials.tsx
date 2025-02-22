@@ -3,36 +3,37 @@ import { Marquee } from "@/components/magicui/marquee";
 
 const reviews = [
   {
-    name: "Jack Thompson",
-    username: "@jack_builds",
-    body: "This tool has completely transformed how I work. The automation features are incredible, and the interface is so intuitive. It's become an essential part of my daily workflow.",
-    img: "https://avatar.vercel.sh/jack",
+    name: "Alice Carter",
+    username: "@alice_research",
+    body: "The deepfake detection accuracy is outstanding! Our team uses it daily for analyzing online media, and it has helped us flag numerous AI-generated fakes with precision.",
+    img: "https://avatar.vercel.sh/alice",
   },
   {
-    name: "Sarah Chen",
-    username: "@sarah_codes",
-    body: "I've tried many similar tools, but this one stands out. The attention to detail and the powerful features make it a game-changer for my development process.",
-    img: "https://avatar.vercel.sh/sarah",
+    name: "James Patel",
+    username: "@james_cyber",
+    body: "This platform is a game-changer for cybersecurity professionals. The real-time detection on social media is incredibly powerful, making it easy to identify manipulated content.",
+    img: "https://avatar.vercel.sh/james",
   },
   {
-    name: "Michael Rodriguez",
-    username: "@mike_dev",
-    body: "The productivity boost I've gotten from this tool is unreal. It's like having an extra team member who handles all the tedious tasks perfectly.",
-    img: "https://avatar.vercel.sh/mike",
+    name: "Sophia Lin",
+    username: "@sophia_ai",
+    body: "I integrated the API into my own application, and the results were phenomenal. The confidence score for deepfake analysis is detailed and highly reliable.",
+    img: "https://avatar.vercel.sh/sophia",
   },
   {
-    name: "Emma Wilson",
-    username: "@emma_builds",
-    body: "Absolutely love how this tool streamlines my workflow. The automations are brilliant, and it's saved me countless hours of work.",
-    img: "https://avatar.vercel.sh/emma",
+    name: "David Kim",
+    username: "@david_ml",
+    body: "The sentiment analysis feature blew me away! Detecting emotional cues in real-time alongside deepfake detection is an innovation that takes security to the next level.",
+    img: "https://avatar.vercel.sh/davidk",
   },
   {
-    name: "David Park",
-    username: "@david_tech",
-    body: "This is exactly what I've been looking for. The features are well thought out, and it integrates perfectly with my existing tools.",
-    img: "https://avatar.vercel.sh/david",
+    name: "Olivia Martinez",
+    username: "@olivia_media",
+    body: "As a journalist, verifying content authenticity is crucial. This tool has helped me ensure that the media I report on is legitimate, saving me from misinformation.",
+    img: "https://avatar.vercel.sh/olivia",
   },
 ];
+
 const column1 = reviews.slice(0, 2);
 const column2 = reviews.slice(2, 4);
 const column3 = reviews.slice(1, 3);

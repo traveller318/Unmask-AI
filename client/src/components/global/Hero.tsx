@@ -16,15 +16,14 @@ const Hero = () => {
       <div className="relative z-10 container mx-auto px-4 text-center">
         {/* Headline */}
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-600">
-          Deploy your website
+          Protecting reality,
           <br />
-          in seconds, not hours.
+          one frame at a time.
         </h1>
 
         {/* Subheading */}
-        <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-10">
-          With our state of the art, cutting edge, we are so back kinda hosting
-          services, you can deploy your website in seconds.
+        <p className="text-xl md:text-xl text-gray-600 max-w-2xl mx-auto mb-10">
+          Our cutting-edge AI detects deepfakes in real time, ensuring authenticity in live streams and videos. Fake content? Not on our watch.
         </p>
 
         {/* CTA Buttons */}
