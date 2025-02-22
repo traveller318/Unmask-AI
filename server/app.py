@@ -11,6 +11,7 @@ from flask_cors import CORS
 import os
 from senti import analyze_video_sentiment  # Ensure this function works properly
 from audio import analyze_video
+from frame import detect_frame_anomalies
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
@@ -39,6 +40,32 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def hello():
     return jsonify({"message": "Hello, working!"})
 
+# ----------- VIDEO FRAME ANAMOLIES ROUTE -------------
+
+@app.route("/analyze_frame", methods=["POST"])
+def analyze_frame():
+    print("DEBUG: Received request to /analyze_audio")
+
+    if "video" not in request.files:
+        print("DEBUG: No file received in request.files")
+        return jsonify({"error": "No video uploaded"}), 400
+
+    video_file = request.files["video"]
+    print(f"DEBUG: Received video file: {video_file.filename}")
+
+    # Save the file temporarily
+    video_path = os.path.join(UPLOAD_FOLDER, video_file.filename)
+    video_file.save(video_path)
+    print(f"DEBUG: Video saved to {video_path}")
+
+    # Process video using analyze_video_sentiment
+    try:
+        result = detect_frame_anomalies(video_path)
+        print("DEBUG: Audio analysis successful")
+        return jsonify(result)
+    except Exception as e:
+        print(f"ERROR: Audio analysis failed - {e}")
+        return jsonify({"error": "Failed to analyze video"}), 500
 
 # ----------- FIXED VIDEO ANALYSIS AUDIO -------------
 @app.route("/analyze_audio", methods=["POST"])
