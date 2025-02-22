@@ -105,7 +105,7 @@ def detect_frame_anomalies(video_path, skip_frames=5):
     return total_frames, abnormal_frames
 
 # Test the function with your video file
-# video_path = '000471.mp4'
+video_path = '000471.mp4'
 skip_frames = 5
 total_frames, abnormal_frames = detect_frame_anomalies(video_path, skip_frames)
 
