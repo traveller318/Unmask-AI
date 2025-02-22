@@ -1,33 +1,24 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="UTF-8">
-  <!-- <meta http-equiv="X-UA-Compatible" content="IE=edge"> -->
   <meta http-equiv="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deepfake Detector Overlay</title>
   <link rel="stylesheet" href="styles.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
-
-    
-
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
   </style>
 </head>
 
 <body>
-  <div class="fixed-container" style="font-family: 'Poppins';width: 100%; height: 100%;">
-    <!-- Background blur and shadow container -->
+  <div class="fixed-container" style="font-family: 'Poppins'; width: 100%; height: 100%;">
     <div class="background-blur"></div>
     <div class="gradient-pulse"></div>
 
     <div class="card">
-      <!-- Side gradients -->
       <div class="side-gradient left"></div>
       <div class="side-gradient right"></div>
-
-      <!-- Top gradient overlay -->
       <div class="top-gradient-overlay"></div>
 
       <div class="card-header">
@@ -38,7 +29,7 @@
           </svg>
           Deepfake Detector
         </div>
-        <div id="analysis-status" class="analysis-status">
+        <div id="analysis-status" class="analysis-status" style="display:flex; flex-direction: column;">
           <button id="start-recording" class="analyze-button">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="camera-icon">
@@ -47,6 +38,11 @@
             </svg>
             Analyze Stream
           </button>
+          <!-- <button id="upload-button" class="upload-button">Upload & Analyze</button> -->
+
+          <label for="file-upload" class="upload-button">Upload & Analyze</label>
+          <input type="file" id="file-upload" class="upload-button" accept="video/*,image" placeholder="Upload files"></input>
+          <button id="submit-button" class="upload-button">Submit</button>
         </div>
       </div>
 
@@ -96,14 +92,15 @@
             </div>
           </div>
         </div>
+
+        <!-- File Upload Section -->
+
       </div>
 
-      <!-- Bottom gradient overlay -->
-      <div class="bottom-gradient-overlay"></div>
-      <!-- <button id="stop-recording" disabled>Stop Recording</button> -->
+      <!-- <div class="bottom-gradient-overlay"></div> -->
     </div>
   </div>
-  
+
   <script src="script.js"></script>
   <script src="popup.js"></script>
 </body>

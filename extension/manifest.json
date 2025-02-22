@@ -16,5 +16,8 @@
     },
     "background": {
         "service_worker": "background.js"
+    },
+    "icons": {
+        "48": "deepfake.png"
     }
 }

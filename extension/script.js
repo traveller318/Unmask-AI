@@ -85,6 +85,52 @@ document.addEventListener('DOMContentLoaded', () => {
     resetButton();
   }
 
+  uploadButton.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      uploadFile(file);
+    }
+  });
+
+  document.getElementById('submit-button').addEventListener('click', async () => {
+    const fileInput = document.getElementById('file-upload');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('Please select a file to upload.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('http://127.0.0.1:5000/analyze-distortions', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const result = await response.json();
+        console.log('File uploaded successfully:', result);
+        // Handle the result as needed
+    } catch (error) {
+        console.error('Error uploading file:', error);
+    }
+});
+
+  function showAnalysis() {
+    analysisResults.style.display = 'block';
+    console.log('Analysis displayed');
+  }
+
   function saveRecording() {
     const blob = new Blob(recordedChunks, { type: "video/webm" });
     const url = URL.createObjectURL(blob);
