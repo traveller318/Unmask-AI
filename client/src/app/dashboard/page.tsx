@@ -5,7 +5,7 @@ import { BsImage, BsCameraVideo, BsTrash, BsShieldCheck, BsShieldX, BsMic, BsEmo
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { AiOutlineWarning } from 'react-icons/ai';
-import { MdWaves } from 'react-icons/md';
+import { MdWaves, MdOutlineVideoSettings } from 'react-icons/md';
 import jsPDF from 'jspdf';
 import axios from 'axios';
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -55,6 +55,36 @@ interface AudioAnalysisResponse {
   metrics: AudioAnalysisData;
   faceDetectionRate: number;
 }
+interface FrameAnalysisData {
+  total_frames: number;
+  abnormal_frames: number;
+}
+
+interface FaceDistortionData {
+  total_frames: number;
+  distorted_faces: number;
+}
+
+interface VideoAnalysisResponse {
+  abnormal_frames_detected: number;
+  analysis_result: string;
+  confidence_score: number;
+  detailed_scores: {
+    audio_visual_sync_score: number;
+    face_quality_score: number;
+    frame_quality_score: number;
+  };
+  distorted_faces: number;
+  mismatch_score: number;
+  risk_level: string;
+  score_explanation: {
+    audio_sync: string;
+    face_analysis: string;
+    frame_analysis: string;
+  };
+  total_frames_processed: number;
+  processing_time: number;
+}
 
 function isImageMetrics(metrics: DeepfakeMetrics | VideoMetrics): metrics is DeepfakeMetrics {
   return 'distortionScore' in metrics;
@@ -87,6 +117,18 @@ const DashboardPage = () => {
   const [analyzingAudio, setAnalyzingAudio] = useState(false);
   const [audioData, setAudioData] = useState<AudioAnalysisResponse | null>(null);
   const audioVideoRef = useRef<HTMLInputElement>(null);
+  
+  const [frameFile, setFrameFile] = useState<FilePreview | null>(null);
+  const [frameDragActive, setFrameDragActive] = useState(false);
+  const [analyzingFrames, setAnalyzingFrames] = useState(false);
+  const [frameData, setFrameData] = useState<FrameAnalysisData | null>(null);
+  const frameVideoRef = useRef<HTMLInputElement>(null);
+  const [distortionFile, setDistortionFile] = useState<FilePreview | null>(null);
+  const [distortionDragActive, setDistortionDragActive] = useState(false);
+  const [analyzingDistortions, setAnalyzingDistortions] = useState(false);
+  const [distortionData, setDistortionData] = useState<FaceDistortionData | null>(null);
+  const distortionVideoRef = useRef<HTMLInputElement>(null);
+  const [videoAnalysis, setVideoAnalysis] = useState<VideoAnalysisResponse | null>(null);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -135,275 +177,99 @@ const DashboardPage = () => {
     setIsAnalyzing(true);
 
     try {
-      const formData = new FormData();
-      formData.append('image', filePreview.file);
+        const formData = new FormData();
+        formData.append('video', filePreview.file); // Change 'file' to 'video'
 
-      const response = await axios.post('http://127.0.0.1:5000/predict', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      const data = response.data;
-
-      console.log("Server response:", data);
-
-      if (filePreview.type === 'image') {
-        try {
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-          
-          const imageData = await filePreview.file.arrayBuffer();
-          const base64Image = Buffer.from(imageData).toString('base64');
-          
-          const backgroundPrompt = `Analyze this image and determine if there are any background inconsistencies, artifacts, or manipulations. 
-          Focus on:
-          1. Background blur patterns
-          2. Edge artifacts around the subject
-          3. Lighting inconsistencies
-          4. Unnatural shadows or reflections
-          
-          Return only a number between 0-100 representing the percentage likelihood of background manipulation.
-          Format your response as a single number only.`;
-
-          const backgroundResult = await model.generateContent([
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: base64Image
-              }
-            },
-            backgroundPrompt
-          ]);
-          const backgroundResponse = await backgroundResult.response;
-          const backgroundObstruction = Math.min(parseFloat(backgroundResponse.text()) || 65, 100);
-
-          const faceMetrics = data.face_distortion[0];
-          const distortionScore = formatPercentage(Math.min(faceMetrics.distortion_score, 100));
-          const jawSymmetry = formatPercentage(Math.min((faceMetrics.jaw_symmetry / 100) * 100, 100));
-          const eyeSymmetry = formatPercentage(Math.min((faceMetrics.eye_symmetry / 150) * 100, 100));
-
-          setMetrics({
-            distortionScore,
-            jawSymmetry,
-            eyeSymmetry,
-            backgroundObstruction: formatPercentage(backgroundObstruction),
-          });
-
-          const insightsPrompt = `
-            Analyze these deepfake detection metrics and provide 4 detailed insights.
-            Metrics:
-            - Overall prediction: ${data.best_label} (${(data.best_score * 100).toFixed(1)}% confidence)
-            - Distortion Score: ${distortionScore}%
-            - Jaw Symmetry: ${jawSymmetry}%
-            - Eye Symmetry: ${eyeSymmetry}%
-            - Background Analysis Score: ${backgroundObstruction}%
-
-            For each insight, provide:
-            1. A short, technical title
-            2. A detailed technical description
-            3. A severity level (high/medium/low) based on the metrics
-
-            Format your response as a valid JSON array with exactly 4 objects.
-            Each object should have these exact keys: "title", "description", "severity"
-            
-            Example format:
-            [
-              {
-                "title": "Example Title",
-                "description": "Example description",
-                "severity": "high"
-              }
-            ]`;
-
-          const insightsResult = await model.generateContent(insightsPrompt);
-          const insightsResponse = await insightsResult.response;
-          const insightsText = insightsResponse.text();
-          
-          const cleanedText = insightsText.replace(/```json\n|\n```/g, '').trim();
-          
-          try {
-            const generatedInsights: DetailedInsight[] = JSON.parse(cleanedText);
-            setInsights(generatedInsights);
-          } catch (jsonError) {
-            console.error('Error parsing insights JSON:', jsonError);
-            setInsights([
-              {
-                title: "Facial Authenticity Analysis",
-                description: `Distortion patterns detected with ${distortionScore}% confidence, indicating potential manipulation.`,
-                severity: distortionScore > 75 ? 'high' : distortionScore > 50 ? 'medium' : 'low'
-              },
-              {
-                title: "Facial Symmetry Assessment",
-                description: `Jaw symmetry deviation at ${jawSymmetry}% and eye symmetry at ${eyeSymmetry}% from normal parameters.`,
-                severity: (jawSymmetry + eyeSymmetry) / 2 > 75 ? 'high' : (jawSymmetry + eyeSymmetry) / 2 > 50 ? 'medium' : 'low'
-              },
-              {
-                title: "Background Consistency Check",
-                description: `Background analysis reveals ${backgroundObstruction}% likelihood of manipulation artifacts.`,
-                severity: backgroundObstruction > 75 ? 'high' : backgroundObstruction > 50 ? 'medium' : 'low'
-              },
-              {
-                title: "Overall Manipulation Confidence",
-                description: `AI detection system reports ${(data.best_score * 100).toFixed(1)}% confidence in ${data.best_label.toLowerCase()} classification.`,
-                severity: data.best_score > 0.75 ? 'high' : data.best_score > 0.5 ? 'medium' : 'low'
-              }
-            ]);
-          }
-        } catch (error) {
-          console.error('Error analyzing image:', error);
+        // Add file size check
+        const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB max file size
+        if (filePreview.file.size > MAX_FILE_SIZE) {
+            alert('File size too large. Please upload a video smaller than 16MB.');
+            setIsAnalyzing(false);
+            return;
         }
-      } else if (filePreview.type === 'video') {
-        setMetrics({
-          faceDistortion: 65,
-          lipSyncDeviation: 82,
-          frameConsistency: 71,
-          audioVideoMismatch: 78
-        } as VideoMetrics);
-      } else {
-        // Add audio analysis logic here if needed
-        setMetrics(null); // Placeholder for audio metrics
-      }
 
-      setIsAnalyzing(false);
-      setAnalysisComplete(true);
+        const endpoint = filePreview.type === 'image' 
+            ? 'http://127.0.0.1:5000/predict'
+            : 'http://127.0.0.1:5000/process_video';
+
+        console.log('Starting analysis of:', filePreview.file.name);
+        console.log('File size:', (filePreview.file.size / (1024 * 1024)).toFixed(2), 'MB');
+
+        const response = await axios.post(endpoint, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+            timeout: 300000, // 5 minutes
+        });
+
+        console.log('Analysis response:', response.data);
+        setVideoAnalysis(response.data);
+        setAnalysisComplete(true);
+
     } catch (error) {
-      console.error('Error analyzing file:', error);
-      alert('Error analyzing file. Please try again.');
-      setIsAnalyzing(false);
+        console.error('Error during analysis:', error);
+        alert('Error analyzing video. Please try again.');
+    } finally {
+        setIsAnalyzing(false);
     }
-  };
+};
 
   const generateReport = async () => {
-    if (!reportRef.current) return;
+    if (!videoAnalysis) return;
 
-    try {
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.width;
-      const pageHeight = pdf.internal.pageSize.height;
-      const margin = 20;
-
-      for (let i = 0; i < pageHeight; i += 10) {
-        for (let j = 0; j < pageWidth; j += 10) {
-          pdf.setFillColor(248, 250, 252);
-          pdf.rect(j, i, 5, 5, 'F');
-        }
-      }
-
-      for (let i = 0; i < 40; i++) {
-        pdf.setFillColor(30 - i/2, 41 - i/2, 59 - i/2);
-        pdf.rect(0, i, pageWidth, 1, 'F');
-      }
-
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(24);
-      pdf.text('Deepfake Analysis Report', pageWidth / 2, 20, { align: 'center' });
-      pdf.setFontSize(12);
-      pdf.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, 30, { align: 'center' });
-
-      const score = getDeepfakeScore();
-      const scoreColor = getScoreColor(score);
-      
-      const centerX = margin + 25;
-      const centerY = 85;
-      const radius = 15;
-      
-      pdf.setFillColor(hexToRGB(scoreColor)[0], hexToRGB(scoreColor)[1], hexToRGB(scoreColor)[2]);
-      pdf.circle(centerX, centerY, radius, 'F');
-      pdf.setTextColor(hexToRGB(scoreColor)[0], hexToRGB(scoreColor)[1], hexToRGB(scoreColor)[2]);
-      pdf.setFontSize(16);
-      pdf.text(`${score}%`, centerX, centerY + 1, { align: 'center' });
-
-      pdf.setFillColor(hexToRGB(scoreColor, 0.1)[0], hexToRGB(scoreColor, 0.1)[1], hexToRGB(scoreColor, 0.1)[2]);
-      pdf.roundedRect(margin + 50, 75, 100, 20, 3, 3, 'F');
-      pdf.setTextColor(hexToRGB(scoreColor)[0], hexToRGB(scoreColor)[1], hexToRGB(scoreColor)[2]);
-      pdf.setFontSize(14);
-      pdf.text(getScoreStatus(score), margin + 55, 87);
-
-      pdf.setTextColor(30, 41, 59);
-      pdf.setFontSize(18);
-      pdf.text('Analysis Metrics', margin, 120);
-
-      pdf.setDrawColor(hexToRGB(scoreColor)[0], hexToRGB(scoreColor)[1], hexToRGB(scoreColor)[2]);
-      pdf.setLineWidth(0.5);
-      pdf.line(margin, 125, pageWidth - margin, 125);
-
-      const metricsData = getMetricsData();
-
-      metricsData.forEach((metric, index) => {
-        const y = 145 + (index * 30);
-        const barWidth = 120;
-        const barHeight = 12;
-        const x = margin;
-
-        pdf.setFillColor(248, 250, 252);
-        pdf.roundedRect(x - 2, y - 12, pageWidth - (2 * margin) + 4, 25, 2, 2, 'F');
-        
-        pdf.setTextColor(71, 85, 105);
-        pdf.setFontSize(12);
-        pdf.text(`${metric.label}`, x, y);
-
-        pdf.setFillColor(241, 245, 249);
-        pdf.roundedRect(x + 80, y - 7, barWidth, barHeight, 2, 2, 'F');
-
-        const metricColor = getScoreColor(metric.value);
-        const [r, g, b, a] = hexToRGB(metricColor, 0.8);
-        pdf.setFillColor(r, g, b, a);
-        pdf.roundedRect(x + 80, y - 7, (metric.value / 100) * barWidth, barHeight, 2, 2, 'F');
-
-        pdf.setFillColor(hexToRGB(metricColor, 0.1)[0], hexToRGB(metricColor, 0.1)[1], hexToRGB(metricColor, 0.1)[2]);
-        pdf.roundedRect(x + 210, y - 7, 25, barHeight, 2, 2, 'F');
-        pdf.setTextColor(hexToRGB(metricColor)[0], hexToRGB(metricColor)[1], hexToRGB(metricColor)[2]);
-        pdf.text(`${metric.value}%`, x + 215, y);
-      });
-
-      pdf.setTextColor(30, 41, 59);
-      pdf.setFontSize(18);
-      pdf.text('Detailed Insights', margin, 280);
-      
-      pdf.setDrawColor(hexToRGB(scoreColor)[0], hexToRGB(scoreColor)[1], hexToRGB(scoreColor)[2]);
-      pdf.line(margin, 285, pageWidth - margin, 285);
-
-      insights.forEach((insight, index) => {
-        const y = 300 + (index * 35);
-        const insightColor = getScoreColor(
-          insight.severity === 'high' ? 80 :
-          insight.severity === 'medium' ? 65 : 40
-        );
-
-        pdf.setDrawColor(hexToRGB(insightColor)[0], hexToRGB(insightColor)[1], hexToRGB(insightColor)[2]);
-        pdf.setFillColor(248, 250, 252);
-        pdf.roundedRect(margin - 2, y - 12, pageWidth - (2 * margin) + 4, 30, 2, 2, 'FD');
-
-        pdf.setFillColor(hexToRGB(insightColor)[0], hexToRGB(insightColor)[1], hexToRGB(insightColor)[2]);
-        pdf.circle(margin + 4, y, 2, 'F');
-
-        pdf.setTextColor(30, 41, 59);
-        pdf.setFontSize(12);
-        pdf.text(insight.title, margin + 10, y);
-        pdf.setTextColor(71, 85, 105);
-        pdf.setFontSize(10);
-        pdf.text(insight.description, margin + 10, y + 10, {
-          maxWidth: pageWidth - (2 * margin) - 15
-        });
-      });
-
-      const footerY = pageHeight - 20;
-      pdf.setFillColor(248, 250, 252);
-      pdf.rect(0, footerY - 10, pageWidth, 30, 'F');
-      pdf.setTextColor(100, 116, 139);
-      pdf.setFontSize(8);
-      pdf.text(
-        'Generated by DeepFake Detection System • Confidential Analysis Report',
-        pageWidth / 2,
-        footerY,
-        { align: 'center' }
-      );
-
-      pdf.save(`Deepfake_Analysis_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Error generating PDF report. Please try again.');
-    }
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    
+    // Add header
+    doc.setFontSize(24);
+    doc.setTextColor(44, 62, 80);
+    doc.text('Deepfake Analysis Report', pageWidth/2, 20, { align: 'center' });
+    
+    // Add timestamp
+    doc.setFontSize(12);
+    doc.setTextColor(127, 140, 141);
+    doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth/2, 30, { align: 'center' });
+    
+    // Add confidence score
+    doc.setFontSize(18);
+    doc.setTextColor(52, 73, 94);
+    doc.text('Analysis Results', 20, 50);
+    doc.setFontSize(14);
+    doc.text(`Confidence Score: ${videoAnalysis.confidence_score.toFixed(1)}%`, 20, 60);
+    doc.text(`Risk Level: ${videoAnalysis.risk_level}`, 20, 70);
+    doc.text(`Analysis Result: ${videoAnalysis.analysis_result}`, 20, 80);
+    
+    // Add detailed scores
+    doc.setFontSize(16);
+    doc.text('Detailed Analysis', 20, 100);
+    doc.setFontSize(12);
+    doc.text(`Face Quality Score: ${videoAnalysis.detailed_scores.face_quality_score.toFixed(1)}%`, 30, 110);
+    doc.text(`Frame Quality Score: ${videoAnalysis.detailed_scores.frame_quality_score.toFixed(1)}%`, 30, 120);
+    doc.text(`Audio-Visual Sync Score: ${videoAnalysis.detailed_scores.audio_visual_sync_score.toFixed(1)}%`, 30, 130);
+    
+    // Add frame analysis
+    doc.setFontSize(16);
+    doc.text('Frame Analysis', 20, 150);
+    doc.setFontSize(12);
+    doc.text(`Total Frames Processed: ${videoAnalysis.total_frames_processed}`, 30, 160);
+    doc.text(`Abnormal Frames Detected: ${videoAnalysis.abnormal_frames_detected}`, 30, 170);
+    doc.text(`Distorted Faces: ${videoAnalysis.distorted_faces}`, 30, 180);
+    
+    // Add explanations
+    doc.setFontSize(16);
+    doc.text('Detailed Explanations', 20, 200);
+    doc.setFontSize(12);
+    doc.text(videoAnalysis.score_explanation.face_analysis, 30, 210, { maxWidth: pageWidth - 40 });
+    doc.text(videoAnalysis.score_explanation.frame_analysis, 30, 220, { maxWidth: pageWidth - 40 });
+    doc.text(videoAnalysis.score_explanation.audio_sync, 30, 230, { maxWidth: pageWidth - 40 });
+    
+    // Add footer
+    doc.setFontSize(10);
+    doc.setTextColor(127, 140, 141);
+    doc.text('Generated by DeepFake Detection System', pageWidth/2, 280, { align: 'center' });
+    
+    // Save the PDF
+    doc.save(`deepfake_analysis_report_${new Date().toISOString().slice(0,10)}.pdf`);
   };
 
   const hexToRGB = (hex: string, alpha: number = 1) => {
@@ -1067,6 +933,572 @@ const DashboardPage = () => {
       </div>
     </div>
   );
+  
+  const handleFrameDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setFrameDragActive(true);
+    } else if (e.type === "dragleave") {
+      setFrameDragActive(false);
+    }
+  };
+
+  const handleFrameFile = (file: File) => {
+    if (!file.type.startsWith('video/')) {
+      alert('Please upload only video files for frame analysis');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setFrameFile({
+      url,
+      type: 'video',
+      file
+    });
+  };
+
+  const handleFrameDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFrameDragActive(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFrameFile(file);
+  };
+
+  const handleFrameSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFrameFile(file);
+  };
+
+  const analyzeFrames = async () => {
+    if (!frameFile) return;
+    setAnalyzingFrames(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('video', frameFile.file);
+
+      const response = await axios.post('http://localhost:5000/analyze_frame', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const [total_frames, abnormal_frames] = response.data;
+      setFrameData({
+        total_frames,
+        abnormal_frames
+      });
+    } catch (error) {
+      console.error('Error analyzing frames:', error);
+      alert('Error analyzing video frames. Please try again.');
+    } finally {
+      setAnalyzingFrames(false);
+    }
+  };
+
+  const renderFrameSection = () => (
+    <div className="mt-12 max-w-4xl mx-auto">
+      <div className="bg-white rounded-2xl p-8 shadow-lg">
+        <h2 className="text-2xl font-bold text-blue-600 mb-6 flex items-center gap-2">
+          <MdOutlineVideoSettings className="text-2xl" />
+          Frame Anomaly Detection
+        </h2>
+
+        {!frameFile ? (
+          <div 
+            className={`
+              border-2 border-dashed rounded-xl p-8
+              ${frameDragActive ? 'border-blue-500 bg-blue-50' : 'border-blue-200'}
+              transition-all duration-300 ease-in-out
+              hover:border-blue-400 hover:bg-blue-50/50
+            `}
+            onDragEnter={handleFrameDrag}
+            onDragLeave={handleFrameDrag}
+            onDragOver={handleFrameDrag}
+            onDrop={handleFrameDrop}
+          >
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="p-4 bg-blue-50 rounded-full">
+                <BsCameraVideo size="2.5rem" className="text-blue-500" />
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-semibold text-gray-700">
+                  Upload Video for Frame Analysis
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  We'll analyze each frame for anomalies and inconsistencies
+                </p>
+              </div>
+              <button
+                onClick={() => frameVideoRef.current?.click()}
+                className="px-6 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+              >
+                Select Video
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-700">Video Preview</h3>
+              <button 
+                onClick={() => {
+                  URL.revokeObjectURL(frameFile.url);
+                  setFrameFile(null);
+                  setFrameData(null);
+                }}
+                className="p-2 hover:bg-red-50 rounded-full transition-colors"
+              >
+                <BsTrash size="1.25rem" className="text-red-500" />
+              </button>
+            </div>
+
+            <video 
+              src={frameFile.url} 
+              controls 
+              className="w-full rounded-lg"
+            />
+
+            {!frameData && (
+              <button
+                onClick={analyzeFrames}
+                disabled={analyzingFrames}
+                className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors"
+              >
+                {analyzingFrames ? 'Analyzing Frames...' : 'Analyze Frame Anomalies'}
+              </button>
+            )}
+
+            {frameData && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Total Frames</h4>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-bold text-blue-600">
+                        {frameData.total_frames}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Abnormal Frames</h4>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-bold text-blue-600">
+                        {frameData.abnormal_frames}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-2">Analysis Summary</h4>
+                  <p className="text-gray-600">
+                    {frameData.abnormal_frames / frameData.total_frames > 0.1 
+                      ? "High number of frame anomalies detected. This video shows significant signs of manipulation."
+                      : frameData.abnormal_frames / frameData.total_frames > 0.05
+                      ? "Moderate number of frame anomalies detected. The video may have been altered."
+                      : "Low number of frame anomalies detected. The video appears to be authentic."}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <input
+          ref={frameVideoRef}
+          type="file"
+          accept="video/*"
+          onChange={handleFrameSelect}
+          className="hidden"
+        />
+      </div>
+    </div>
+  );
+
+  const handleDistortionDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDistortionDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDistortionDragActive(false);
+    }
+  };
+
+  const handleDistortionFile = (file: File) => {
+    if (!file.type.startsWith('video/')) {
+      alert('Please upload only video files for face distortion analysis');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setDistortionFile({
+      url,
+      type: 'video',
+      file
+    });
+  };
+
+  const handleDistortionDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDistortionDragActive(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleDistortionFile(file);
+  };
+
+  const handleDistortionSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleDistortionFile(file);
+  };
+
+  const analyzeDistortions = async () => {
+    if (!distortionFile) return;
+    setAnalyzingDistortions(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('video', distortionFile.file);
+
+      const response = await axios.post('http://localhost:5000/analyze_distortions', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const [total_frames, distorted_faces] = response.data;
+      setDistortionData({
+        total_frames,
+        distorted_faces
+      });
+    } catch (error) {
+      console.error('Error analyzing face distortions:', error);
+      alert('Error analyzing face distortions. Please try again.');
+    } finally {
+      setAnalyzingDistortions(false);
+    }
+  };
+
+  const renderDistortionSection = () => (
+    <div className="mt-12 max-w-4xl mx-auto">
+      <div className="bg-white rounded-2xl p-8 shadow-lg">
+        <h2 className="text-2xl font-bold text-blue-600 mb-6 flex items-center gap-2">
+          <BsImage className="text-2xl" />
+          Face Distortion Analysis
+        </h2>
+
+        {!distortionFile ? (
+          <div 
+            className={`
+              border-2 border-dashed rounded-xl p-8
+              ${distortionDragActive ? 'border-blue-500 bg-blue-50' : 'border-blue-200'}
+              transition-all duration-300 ease-in-out
+              hover:border-blue-400 hover:bg-blue-50/50
+            `}
+            onDragEnter={handleDistortionDrag}
+            onDragLeave={handleDistortionDrag}
+            onDragOver={handleDistortionDrag}
+            onDrop={handleDistortionDrop}
+          >
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="p-4 bg-blue-50 rounded-full">
+                <BsCameraVideo size="2.5rem" className="text-blue-500" />
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-semibold text-gray-700">
+                  Upload Video for Face Distortion Analysis
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  We'll analyze facial features and detect distortions
+                </p>
+              </div>
+              <button
+                onClick={() => distortionVideoRef.current?.click()}
+                className="px-6 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+              >
+                Select Video
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-700">Video Preview</h3>
+              <button 
+                onClick={() => {
+                  URL.revokeObjectURL(distortionFile.url);
+                  setDistortionFile(null);
+                  setDistortionData(null);
+                }}
+                className="p-2 hover:bg-red-50 rounded-full transition-colors"
+              >
+                <BsTrash size="1.25rem" className="text-red-500" />
+              </button>
+            </div>
+
+            <video 
+              src={distortionFile.url} 
+              controls 
+              className="w-full rounded-lg"
+            />
+
+            {!distortionData && (
+              <button
+                onClick={analyzeDistortions}
+                disabled={analyzingDistortions}
+                className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors"
+              >
+                {analyzingDistortions ? 'Analyzing Face Distortions...' : 'Analyze Face Distortions'}
+              </button>
+            )}
+
+            {distortionData && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Total Frames Analyzed</h4>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-bold text-blue-600">
+                        {distortionData.total_frames}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Distorted Faces Detected</h4>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-bold text-blue-600">
+                        {distortionData.distorted_faces}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-2">Analysis Summary</h4>
+                  <p className="text-gray-600">
+                    {distortionData.distorted_faces > distortionData.total_frames * 0.5 
+                      ? `High number of distorted faces detected (${distortionData.distorted_faces}). This suggests multiple faces in the video, with significant facial manipulations present.`
+                      : distortionData.distorted_faces > distortionData.total_frames * 0.2
+                      ? `Moderate level of face distortions detected (${distortionData.distorted_faces} frames). Some facial features show signs of manipulation.`
+                      : `Low number of face distortions detected (${distortionData.distorted_faces} frames). The facial features appear mostly authentic.`}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <input
+          ref={distortionVideoRef}
+          type="file"
+          accept="video/*"
+          onChange={handleDistortionSelect}
+          className="hidden"
+        />
+      </div>
+    </div>
+  );
+
+  const renderVideoAnalysis = () => (
+    <div className="space-y-8">
+      <div className="bg-white rounded-3xl p-10 shadow-2xl border border-blue-100">
+        {/* Header Section with Report Button */}
+        <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center gap-6">
+            <div className="relative w-32 h-32">
+              <CircularProgressbar
+                value={videoAnalysis?.confidence_score || 0}
+                text={`${(videoAnalysis?.confidence_score || 0).toFixed(1)}%`}
+                styles={buildStyles({
+                  pathColor: videoAnalysis?.risk_level === 'High' ? '#ef4444' : '#22c55e',
+                  textColor: videoAnalysis?.risk_level === 'High' ? '#ef4444' : '#22c55e',
+                  trailColor: '#f3f4f6',
+                  textSize: '16px',
+                  pathTransitionDuration: 0.5
+                })}
+              />
+              {videoAnalysis?.risk_level === 'High' && (
+                <div className="absolute -top-2 -right-2 animate-pulse">
+                  <AiOutlineWarning className="text-2xl text-red-500" />
+                </div>
+              )}
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                {videoAnalysis?.analysis_result || 'Analysis Complete'}
+              </h2>
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium
+                  ${videoAnalysis?.risk_level === 'High' 
+                    ? 'bg-red-100 text-red-700' 
+                    : 'bg-green-100 text-green-700'}`}>
+                  {videoAnalysis?.risk_level || 'Low'} Risk
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <button
+            onClick={generateReport}
+            className="group relative px-8 py-3 bg-blue-600 rounded-xl text-white font-medium shadow-lg hover:bg-blue-700 transition-all duration-300"
+          >
+            <span className="relative flex items-center gap-2">
+              <FiDownload className="text-xl" />
+              Export Report
+            </span>
+          </button>
+        </div>
+
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-3 gap-8 mb-12">
+          {/* Frame Analysis */}
+          <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-medium text-gray-700">Frame Analysis</h3>
+              <BsCameraVideo className="text-blue-500 text-xl" />
+            </div>
+            <div className="relative w-32 h-32 mx-auto mb-4">
+              <CircularProgressbar
+                value={videoAnalysis ? 
+                  (videoAnalysis.abnormal_frames_detected / videoAnalysis.total_frames_processed * 100) || 0 
+                  : 0
+                }
+                text={`${videoAnalysis?.abnormal_frames_detected || 0}`}
+                styles={buildStyles({
+                  pathColor: '#3b82f6',
+                  textColor: '#3b82f6',
+                  trailColor: '#f3f4f6',
+                  textSize: '16px'
+                })}
+              />
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">
+                of {videoAnalysis?.total_frames_processed} frames show anomalies
+              </p>
+            </div>
+          </div>
+
+          {/* Face Detection */}
+          <div className="bg-gradient-to-br from-red-50 to-white p-6 rounded-xl border border-red-100">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-medium text-gray-700">Face Analysis</h3>
+              <BsImage className="text-red-500 text-xl" />
+            </div>
+            <div className="relative w-32 h-32 mx-auto mb-4">
+              <CircularProgressbar
+                value={videoAnalysis?.detailed_scores?.face_quality_score || 0}
+                text={`${videoAnalysis?.distorted_faces || 0}`}
+                styles={buildStyles({
+                  pathColor: '#ef4444',
+                  textColor: '#ef4444',
+                  trailColor: '#f3f4f6',
+                  textSize: '16px'
+                })}
+              />
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">distorted faces detected</p>
+            </div>
+          </div>
+
+          {/* Audio Sync */}
+          <div className="bg-gradient-to-br from-yellow-50 to-white p-6 rounded-xl border border-yellow-100">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-medium text-gray-700">Audio Sync</h3>
+              <MdWaves className="text-yellow-500 text-xl" />
+            </div>
+            <div className="relative w-32 h-32 mx-auto mb-4">
+              <CircularProgressbar
+                value={videoAnalysis?.detailed_scores?.audio_visual_sync_score || 0}
+                text={`${videoAnalysis?.mismatch_score?.toFixed(2) || '0.00'}`}
+                styles={buildStyles({
+                  pathColor: '#f59e0b',
+                  textColor: '#f59e0b',
+                  trailColor: '#f3f4f6',
+                  textSize: '16px'
+                })}
+              />
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">audio-visual mismatch score</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Detailed Scores */}
+        <div className="bg-gradient-to-r from-blue-50 to-white p-8 rounded-2xl mb-12">
+          <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <BsShieldCheck className="text-blue-500" />
+            Quality Analysis Scores
+          </h3>
+          <div className="grid grid-cols-3 gap-8">
+            {[
+              {
+                label: "Audio-Visual Sync",
+                score: videoAnalysis?.detailed_scores?.audio_visual_sync_score,
+                color: "blue",
+                icon: MdWaves
+              },
+              {
+                label: "Face Quality",
+                score: videoAnalysis?.detailed_scores?.face_quality_score,
+                color: "green",
+                icon: BsImage
+              },
+              {
+                label: "Frame Quality",
+                score: videoAnalysis?.detailed_scores?.frame_quality_score,
+                color: "purple",
+                icon: BsCameraVideo
+              }
+            ].map((item, index) => (
+              <div key={index} className="bg-white p-6 rounded-xl shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium text-gray-600">{item.label}</span>
+                  <item.icon className={`text-${item.color}-500 text-xl`} />
+                </div>
+                <div className="w-24 h-24 mx-auto mb-4">
+                  <CircularProgressbar
+                    value={Math.max(0, Math.min(100, item.score || 0))}
+                    text={`${item.score?.toFixed(1)}%`}
+                    styles={buildStyles({
+                      pathColor: `var(--${item.color}-500)`,
+                      textColor: `var(--${item.color}-500)`,
+                      trailColor: '#f3f4f6'
+                    })}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Analysis Insights */}
+        <div className="space-y-6">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Detailed Insights</h3>
+          <div className="grid grid-cols-1 gap-4">
+            {videoAnalysis?.score_explanation && Object.entries(videoAnalysis.score_explanation).map(([key, value]) => (
+              key !== 'weights_used' && (
+                <div key={key} 
+                  className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100 hover:shadow-md transition-all">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      {key.includes('audio') ? <MdWaves className="text-blue-500 text-xl" /> :
+                       key.includes('face') ? <BsImage className="text-blue-500 text-xl" /> :
+                       <BsCameraVideo className="text-blue-500 text-xl" />}
+                    </div>
+                    <p className="text-gray-700 leading-relaxed">{value}</p>
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-8">
@@ -1146,18 +1578,14 @@ const DashboardPage = () => {
                     src={filePreview.url} 
                     alt="Preview" 
                     className="max-h-[400px] rounded-lg object-contain"
+                    onError={(e) => console.error('Image loading error:', e)}
                   />
-                ) : filePreview.type === 'video' ? (
+                ) : filePreview.type === 'video' && (
                   <video 
-                    src={filePreview.url} 
-                    controls 
+                    src={filePreview.url}
+                    controls
                     className="max-h-[400px] rounded-lg"
-                  />
-                ) : (
-                  <audio 
-                    src={filePreview.url} 
-                    controls 
-                    className="w-full max-w-[400px]"
+                    onError={(e) => console.error('Video loading error:', e)}
                   />
                 )}
               </div>
@@ -1173,7 +1601,8 @@ const DashboardPage = () => {
             </div>
             
             {isAnalyzing && renderAnalyzing()}
-            {analysisComplete && renderAnalysisResults()}
+            {analysisComplete && filePreview?.type === 'video' && renderVideoAnalysis()}
+            {analysisComplete && filePreview?.type === 'image' && renderAnalysisResults()}
           </>
         )}
 
@@ -1207,8 +1636,28 @@ const DashboardPage = () => {
           </p>
         </div>
       </div>
-      {renderAudioSection()}
-      {renderSentimentSection()}
+      {/* Create a grid layout for the analysis sections */}
+      <div className="mt-16 grid grid-cols-2 gap-8 max-w-[1400px] mx-auto">
+        {/* Audio Analysis */}
+        <div className="transform hover:scale-[1.02] transition-transform">
+          {renderAudioSection()}
+        </div>
+
+        {/* Frame Analysis */}
+        <div className="transform hover:scale-[1.02] transition-transform">
+          {renderFrameSection()}
+        </div>
+
+        {/* Face Distortion Analysis */}
+        <div className="transform hover:scale-[1.02] transition-transform">
+          {renderDistortionSection()}
+        </div>
+
+        {/* Sentiment Analysis */}
+        <div className="transform hover:scale-[1.02] transition-transform">
+          {renderSentimentSection()}
+        </div>
+      </div>
     </div>
   );
 };

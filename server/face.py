@@ -102,13 +102,5 @@ def detect_face_distortion(video_path, skip_frames=5):
     #     cv2.destroyAllWindows()
     # else:
     #     print("No abnormal frames detected.")
-    # Save results to a JSON file
-    results_file_path = 'results.json'
-
-# Prepare the data to be saved
-    results_data = {
-        'total_frames': total_frames,
-        'distorted_faces': distorted_faces
-    }
     return total_frames, distorted_faces
 

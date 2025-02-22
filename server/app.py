@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from transformers import pipeline
-from PIL import Image
-import io
+from PIL import Image, ImageDraw, ImageFont
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -14,9 +13,19 @@ from audio import analyze_video
 from frame import detect_frame_anomalies
 from face import detect_face_distortion
 from analysis import process_video
+from werkzeug.utils import secure_filename
+import logging
+import io
+
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Debugging: Print when server starts
 print("🚀 Server is running at http://127.0.0.1:5000/")
@@ -33,9 +42,17 @@ face_mesh = mp_face_mesh.FaceMesh(
     min_tracking_confidence=0.5,
 )
 
-# Create a temporary directory to store uploaded files
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Add these configurations at the top of app.py after the imports
+UPLOAD_FOLDER = '/tmp'
+ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'wmv'}
+MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+
+# Add helper function to check allowed files
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.route("/", methods=["GET"])
@@ -152,20 +169,6 @@ def analyze_sentiment():
 
 
 # ----------- DEEPFAKE DETECTION -------------
-def convert_to_jpg(image):
-    """Convert image to JPG format while preserving quality"""
-    if image.format != "JPEG":
-        rgb_image = Image.new("RGB", image.size, (255, 255, 255))
-        if image.mode == "RGBA":
-            rgb_image.paste(image, mask=image.split()[3])
-        else:
-            rgb_image.paste(image)
-
-        jpg_buffer = io.BytesIO()
-        rgb_image.save(jpg_buffer, format="JPEG", quality=95)
-        jpg_buffer.seek(0)
-        return Image.open(jpg_buffer)
-    return image
 
 
 def calculate_face_distortion(image):
@@ -213,20 +216,73 @@ def calculate_face_distortion(image):
 
     return distortions
 
+def add_ai_generated_text(image):
+    """Overlay 'AI Generated' text on the image."""
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.load_default()  # Default font (you can change this)
+    
+    text = "AI Generated"
+    text_position = (10, 10)  # Top-left corner
+    text_color = (255, 0, 0)  # Red color
+    
+    draw.text(text_position, text, fill=text_color, font=font)
+    return image
+
 
 @app.route("/predict", methods=["POST"])
 def detect_deepfake():
     print("DEBUG: Received request to /predict")
 
-    if "image" not in request.files:
-        print("DEBUG: No image received in request.files")
-        return jsonify({"error": "No image uploaded"}), 400
+    if "image" not in request.files and "video" not in request.files:
+        print("DEBUG: No image or video received in request.files")
+        return jsonify({"error": "No media file uploaded"}), 400
+
+    # Check if it's a video file
+    if "video" in request.files:
+        video_file = request.files["video"]
+        allowed_extensions = {'mp4', 'avi', 'mov', 'mkv'}
+        if not video_file.filename.lower().endswith(tuple(allowed_extensions)):
+            return jsonify({"error": "Invalid video format"}), 400
+
+        # Save video to temporary file
+        temp_path = os.path.join('/tmp', video_file.filename)
+        video_file.save(temp_path)
+
+        try:
+            # Process video
+            results = process_video(temp_path)
+            
+            # Clean up temporary file
+            try:
+                os.remove(temp_path)
+            except Exception as e:
+                print(f"Error removing temporary file: {str(e)}")
+
+            return jsonify(results)
+
+        except Exception as e:
+            return jsonify({
+                "error": str(e),
+                "status": "failed",
+                "confidence_score": 0,
+                "analysis_result": "Analysis failed"
+            }), 500
+
+    # Handle image file
 
     image_file = request.files["image"]
     print(f"DEBUG: Received image file: {image_file.filename}")
 
-    original_image = Image.open(io.BytesIO(image_file.read()))
-    image = convert_to_jpg(original_image)
+     # Open image directly without conversion
+    image = Image.open(io.BytesIO(image_file.read()))
+
+    # Add "AI Generated" text to the image
+    image = add_ai_generated_text(image)
+
+    # Save the modified image to a buffer
+    img_io = io.BytesIO()
+    image.save(img_io, format=image.format or 'PNG')  # Use original format or PNG as fallback
+    img_io.seek(0)
 
     result = pipe(image)
     best_prediction = max(result, key=lambda x: x["score"])
@@ -237,37 +293,110 @@ def detect_deepfake():
         "best_label": best_prediction["label"],
         "best_score": best_prediction["score"],
         "face_distortion": distortion_data,
-        "image_format": "JPEG",
+        "image_format": image.format or 'PNG',
+        "image": img_io.getvalue().hex()  # Co
     }
 
     return jsonify(response)
+
 @app.route('/process_video', methods=['POST'])
 def process_video_endpoint():
-    # Check if the post request has the file part
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part in the request'}), 400
-
-    file = request.files['file']
-
-    # If no file is selected
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    # Save the uploaded file temporarily
-    video_path = os.path.join("/tmp", file.filename)
-    file.save(video_path)
-
     try:
-        # Process the video
-        results = process_video(video_path)
+        # Check if video file is present
+        if 'video' not in request.files:
+            return jsonify({'error': 'No video file uploaded'}), 400
 
-        # Remove the temporary file after processing
-        os.remove(video_path)
+        video_file = request.files['video']
+        
+        # If no file selected
+        if video_file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
 
-        # Return the results as JSON response
-        return jsonify(results), 200
+        # Check if file type is allowed
+        if not allowed_file(video_file.filename):
+            return jsonify({'error': 'File type not allowed. Please upload MP4, AVI, MOV, or WMV files.'}), 400
+
+        # Secure the filename
+        filename = secure_filename(video_file.filename)
+        
+        # Create temporary directory if it doesn't exist
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+        # Save the uploaded file temporarily
+        video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        video_file.save(video_path)
+
+        try:
+            # Process video using our existing functions
+            face_results = detect_face_distortion(video_path)
+            frame_results = detect_frame_anomalies(video_path)
+            audio_results, face_detection_rate = analyze_video(video_path)
+
+            # Calculate overall metrics
+            total_frames = frame_results[0]
+            abnormal_frames = frame_results[1]
+            
+            # Calculate confidence score
+            face_score = 100 * (1 - face_results[1]/face_results[0]) if face_results[0] > 0 else 0
+            frame_score = 100 * (1 - abnormal_frames/total_frames) if total_frames > 0 else 0
+            audio_score = 100 * (1 - audio_results['mismatch_score'])
+
+            confidence_score = (face_score + frame_score + audio_score) / 3
+
+            results = {
+                'total_frames_processed': total_frames,
+                'abnormal_frames_detected': abnormal_frames,
+                'distorted_faces': face_results[1],
+                'confidence_score': round(confidence_score, 2),
+                'detailed_scores': {
+                    'face_quality_score': round(face_score, 2),
+                    'frame_quality_score': round(frame_score, 2),
+                    'audio_visual_sync_score': round(audio_score, 2)
+                },
+                'mismatch_score': round(audio_results['mismatch_score'], 2),
+                'risk_level': 'High' if confidence_score < 50 else 'Medium' if confidence_score < 75 else 'Low',
+                'analysis_result': 'Likely manipulated' if confidence_score < 50 else 'Possibly authentic',
+                'score_explanation': {
+                    'face_analysis': f"Face quality score: {round(face_score, 2)}% - Based on facial distortion analysis",
+                    'frame_analysis': f"Frame quality score: {round(frame_score, 2)}% - Based on frame consistency",
+                    'audio_sync': f"Audio-visual sync score: {round(audio_score, 2)}% - Based on lip sync analysis"
+                }
+            }
+
+            return jsonify(results), 200
+
+        except Exception as e:
+            logging.error(f"Error processing video: {str(e)}")
+            return jsonify({
+                'error': str(e),
+                'status': 'failed',
+                'message': 'Failed to process video'
+            }), 500
+
+        finally:
+            # Clean up: remove the temporary file
+            try:
+                if os.path.exists(video_path):
+                    os.remove(video_path)
+            except Exception as e:
+                logging.error(f"Error removing temporary file: {str(e)}")
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logging.error(f"Server error: {str(e)}")
+        return jsonify({
+            'error': str(e),
+            'status': 'failed',
+            'message': 'Server error occurred'
+        }), 500
+
+# Add error handler for file too large
+@app.errorhandler(413)
+def too_large(e):
+    return jsonify({
+        'error': 'File is too large',
+        'status': 'failed',
+        'message': 'The file exceeds the maximum allowed size of 16MB'
+    }), 413
 
 
 # ----------- RUN FLASK APP -------------
