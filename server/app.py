@@ -44,7 +44,7 @@ def hello():
 # ----------- FACE DISTORTIONS ROUTE -------------
 
 @app.route("/analyze_distortions", methods=["POST"])
-def analyze_frame():
+def analyze_distortions():
     print("DEBUG: Received request to /analyze_distortions")
 
     if "video" not in request.files:
