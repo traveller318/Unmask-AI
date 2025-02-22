@@ -9,8 +9,13 @@
         "tabCapture",
         "tabs",
         "desktopCapture",
-        "downloads"
+        "downloads",
+        "storage"
     ],
+    "host_permissions": [
+        "http://127.0.0.1:5000/*",
+         "https://www.google.com/*", 
+         "https://www.youtube.com/*"],
     "action": {
         "default_popup": "popup.html"
     },
@@ -19,5 +24,9 @@
     },
     "icons": {
         "48": "deepfake.png"
-    }
+    },
+    "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+   
 }

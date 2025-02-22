@@ -41,8 +41,8 @@
           <!-- <button id="upload-button" class="upload-button">Upload & Analyze</button> -->
 
           <label for="file-upload" class="upload-button">Upload & Analyze</label>
-          <input type="file" id="file-upload" class="upload-button" accept="video/*,image" placeholder="Upload files"></input>
-          <button id="submit-button" class="upload-button">Submit</button>
+          <input type="file" id="file-upload" class="upload-button" accept="video/*,image/*" placeholder="Upload files"></input>
+          <button id="submit-button" class="upload-button" type="submit" >Submit</button>
         </div>
       </div>
 
@@ -74,22 +74,8 @@
         <div class="detailed-analysis">
           <h3 class="section-title">Detailed Analysis</h3>
           <div class="metrics-container">
-            <div class="metric">
-              <span class="label">Face Distortion</span>
-              <span class="value" style="color: #d97706;">65%</span>
-            </div>
-            <div class="metric">
-              <span class="label">Lip-Sync Deviation</span>
-              <span class="value" style="color: #ef4444;">82%</span>
-            </div>
-            <div class="metric">
-              <span class="label">Frame Consistency</span>
-              <span class="value" style="color: #facc15;">71%</span>
-            </div>
-            <div class="metric">
-              <span class="label">Audio-Video Mismatch</span>
-              <span class="value" style="color: #facc15;">75%</span>
-            </div>
+            
+            
           </div>
         </div>
 
@@ -100,7 +86,7 @@
       <!-- <div class="bottom-gradient-overlay"></div> -->
     </div>
   </div>
-
+   
   <script src="script.js"></script>
   <script src="popup.js"></script>
 </body>
