@@ -13,6 +13,7 @@ from senti import analyze_video_sentiment  # Ensure this function works properly
 from audio import analyze_video
 from frame import detect_frame_anomalies
 from face import detect_face_distortion
+from analysis import process_video
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
@@ -240,8 +241,36 @@ def detect_deepfake():
     }
 
     return jsonify(response)
+@app.route('/process_video', methods=['POST'])
+def process_video_endpoint():
+    # Check if the post request has the file part
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+
+    file = request.files['file']
+
+    # If no file is selected
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    # Save the uploaded file temporarily
+    video_path = os.path.join("/tmp", file.filename)
+    file.save(video_path)
+
+    try:
+        # Process the video
+        results = process_video(video_path)
+
+        # Remove the temporary file after processing
+        os.remove(video_path)
+
+        # Return the results as JSON response
+        return jsonify(results), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # ----------- RUN FLASK APP -------------
+
 if __name__ == "__main__":
     app.run(debug=True)

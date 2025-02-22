@@ -1,6 +1,6 @@
 {
     "total_frames": 25,
-    "distorted_faces": 0,
+    "distorted_faces": 11,
     "total_frames_processed": 25,
     "total_abnormal_frames_detected": 1,
     "face_detection_rate": 100.0,

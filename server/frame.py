@@ -8,7 +8,7 @@ from facenet_pytorch import MTCNN
 from PIL import Image
 import os
 import librosa
-from moviepy.editor import VideoFileClip
+from moviepy import VideoFileClip
 from transformers import Wav2Vec2Processor, Wav2Vec2Model
 import mediapipe as mp
 import matplotlib.pyplot as plt
@@ -104,37 +104,3 @@ def detect_frame_anomalies(video_path, skip_frames=5):
     cv2.destroyAllWindows()
     return total_frames, abnormal_frames
 
-# Test the function with your video file
-video_path = '000471.mp4'
-skip_frames = 5
-total_frames, abnormal_frames = detect_frame_anomalies(video_path, skip_frames)
-
-# Print the results
-print(f"Total Frames Processed: {total_frames}")
-print(f"Total Abnormal Frames Detected: {abnormal_frames}")
-
-# Save results to a JSON file
-results_file_path = 'results.json'
-
-# Prepare the data to be saved
-results_data = {
-    "total_frames_processed": total_frames,
-    "total_abnormal_frames_detected": abnormal_frames
-}
-
-try:
-    # If the file exists and is not empty, read and update existing data
-    if os.path.exists(results_file_path) and os.path.getsize(results_file_path) > 0:
-        with open(results_file_path, 'r') as file:
-            existing_data = json.load(file)
-        # Update the existing data with new results
-        existing_data.update(results_data)
-        results_data = existing_data
-
-    # Write the results to the file
-    with open(results_file_path, 'w') as file:
-        json.dump(results_data, file, indent=4)
-
-    print(f"Results saved to {results_file_path}: {results_data}")
-except Exception as e:
-    print(f"Error handling results file: {str(e)}")

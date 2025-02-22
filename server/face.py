@@ -95,47 +95,20 @@ def detect_face_distortion(video_path, skip_frames=5):
     cap.release()
 
     # Display one example of an abnormal frame
-    if example_abnormal_frame is not None:
-        print("Displaying one example of an abnormal frame:")
-        cv2.imshow("Example Abnormal Frame", example_abnormal_frame)
-        cv2.waitKey(0)  # Wait until a key is pressed to close the window
-        cv2.destroyAllWindows()
-    else:
-        print("No abnormal frames detected.")
-
-    return total_frames, distorted_faces
-
-# Run the test
-video_path = '000471.mp4'
-skip_frames = 5  # Process every 5th frame to improve performance
-total_frames, distorted_faces = detect_face_distortion(video_path, skip_frames)
-
-# Print the results
-print(f"Total Frames Processed: {total_frames}")
-print(f"Total Distorted Faces Detected: {distorted_faces}")
-
-# Save results to a JSON file
-results_file_path = 'results.json'
+    # if example_abnormal_frame is not None:
+    #     print("Displaying one example of an abnormal frame:")
+    #     cv2.imshow("Example Abnormal Frame", example_abnormal_frame)
+    #     cv2.waitKey(0)  # Wait until a key is pressed to close the window
+    #     cv2.destroyAllWindows()
+    # else:
+    #     print("No abnormal frames detected.")
+    # Save results to a JSON file
+    results_file_path = 'results.json'
 
 # Prepare the data to be saved
-results_data = {
-    'total_frames': total_frames,
-    'distorted_faces': distorted_faces
-}
+    results_data = {
+        'total_frames': total_frames,
+        'distorted_faces': distorted_faces
+    }
+    return total_frames, distorted_faces
 
-try:
-    # If the file exists and is not empty, read and update existing data
-    if os.path.exists(results_file_path) and os.path.getsize(results_file_path) > 0:
-        with open(results_file_path, 'r') as file:
-            existing_data = json.load(file)
-        # Update the existing data with new results
-        existing_data.update(results_data)
-        results_data = existing_data
-
-    # Write the results to the file
-    with open(results_file_path, 'w') as file:
-        json.dump(results_data, file, indent=4)
-
-    print(f"Results saved to {results_file_path}: {results_data}")
-except Exception as e:
-    print(f"Error handling results file: {str(e)}")
