@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef } from 'react';
 import { FiUploadCloud, FiDownload } from 'react-icons/fi';
-import { BsImage, BsCameraVideo, BsTrash, BsShieldCheck, BsShieldX, BsMic } from 'react-icons/bs';
+import { BsImage, BsCameraVideo, BsTrash, BsShieldCheck, BsShieldX, BsMic, BsEmojiSmile, BsEmojiNeutral, BsEmojiFrown, BsEmojiAngry, BsEmojiSurprise } from 'react-icons/bs';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { AiOutlineWarning } from 'react-icons/ai';
@@ -36,6 +36,26 @@ interface DetailedInsight {
   description: string;
   severity: 'high' | 'medium' | 'low';
 }
+
+interface SentimentData {
+  angry: number;
+  happy: number;
+  neutral: number;
+  sad: number;
+  surprise: number;
+}
+
+interface AudioAnalysisData {
+  cosine_similarity: number;
+  euclidean_distance: number;
+  mismatch_score: number;
+}
+
+interface AudioAnalysisResponse {
+  metrics: AudioAnalysisData;
+  faceDetectionRate: number;
+}
+
 function isImageMetrics(metrics: DeepfakeMetrics | VideoMetrics): metrics is DeepfakeMetrics {
   return 'distortionScore' in metrics;
 }
@@ -57,6 +77,16 @@ const DashboardPage = () => {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const reportRef = useRef<HTMLDivElement>(null);
+  const [sentimentFile, setSentimentFile] = useState<FilePreview | null>(null);
+  const [sentimentDragActive, setSentimentDragActive] = useState(false);
+  const [analyzingSentiment, setAnalyzingSentiment] = useState(false);
+  const [sentimentData, setSentimentData] = useState<SentimentData | null>(null);
+  const sentimentVideoRef = useRef<HTMLInputElement>(null);
+  const [audioFile, setAudioFile] = useState<FilePreview | null>(null);
+  const [audioDragActive, setAudioDragActive] = useState(false);
+  const [analyzingAudio, setAnalyzingAudio] = useState(false);
+  const [audioData, setAudioData] = useState<AudioAnalysisResponse | null>(null);
+  const audioVideoRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -649,6 +679,395 @@ const DashboardPage = () => {
     </div>
   );
 
+  const handleSentimentDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setSentimentDragActive(true);
+    } else if (e.type === "dragleave") {
+      setSentimentDragActive(false);
+    }
+  };
+
+  const handleSentimentFile = (file: File) => {
+    if (!file.type.startsWith('video/')) {
+      alert('Please upload only video files for sentiment analysis');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setSentimentFile({
+      url,
+      type: 'video',
+      file
+    });
+  };
+
+  const handleSentimentDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSentimentDragActive(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleSentimentFile(file);
+  };
+
+  const handleSentimentSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleSentimentFile(file);
+  };
+
+  const analyzeSentiment = async () => {
+    if (!sentimentFile) return;
+    setAnalyzingSentiment(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('video', sentimentFile.file);
+
+      const response = await axios.post('http://127.0.0.1:5000/analyze_sentiment', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setSentimentData(response.data);
+    } catch (error) {
+      console.error('Error analyzing sentiment:', error);
+      alert('Error analyzing sentiment. Please try again.');
+    } finally {
+      setAnalyzingSentiment(false);
+    }
+  };
+
+  const getDominantEmotion = () => {
+    if (!sentimentData) return null;
+    const emotions = Object.entries(sentimentData);
+    return emotions.reduce((max, emotion) => 
+      emotion[1] > max[1] ? emotion : max
+    )[0];
+  };
+
+  const renderSentimentSection = () => (
+    <div className="mt-12 max-w-4xl mx-auto">
+      <div className="bg-white rounded-2xl p-8 shadow-lg">
+        <h2 className="text-2xl font-bold text-blue-600 mb-6">
+          Video Sentiment Analysis
+        </h2>
+
+        {!sentimentFile ? (
+          <div 
+            className={`
+              border-2 border-dashed rounded-xl p-8
+              ${sentimentDragActive ? 'border-blue-500 bg-blue-50' : 'border-blue-200'}
+              transition-all duration-300 ease-in-out
+              hover:border-blue-400 hover:bg-blue-50/50
+            `}
+            onDragEnter={handleSentimentDrag}
+            onDragLeave={handleSentimentDrag}
+            onDragOver={handleSentimentDrag}
+            onDrop={handleSentimentDrop}
+          >
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <BsCameraVideo size="3rem" className="text-blue-500" />
+              <div className="text-center">
+                <p className="text-xl font-semibold text-gray-700">
+                  Drag and drop your video here
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  or click to select a video file
+                </p>
+              </div>
+              <button
+                onClick={() => sentimentVideoRef.current?.click()}
+                className="px-6 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+              >
+                Select Video
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-700">Video Preview</h3>
+              <button 
+                onClick={() => {
+                  URL.revokeObjectURL(sentimentFile.url);
+                  setSentimentFile(null);
+                  setSentimentData(null);
+                }}
+                className="p-2 hover:bg-red-50 rounded-full transition-colors"
+              >
+                <BsTrash size="1.25rem" className="text-red-500" />
+              </button>
+            </div>
+
+            <video 
+              src={sentimentFile.url} 
+              controls 
+              className="w-full rounded-lg"
+            />
+
+            {!sentimentData && (
+              <button
+                onClick={analyzeSentiment}
+                disabled={analyzingSentiment}
+                className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors"
+              >
+                {analyzingSentiment ? 'Analyzing...' : 'Check Sentiments'}
+              </button>
+            )}
+
+            {sentimentData && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-5 gap-4">
+                  <div className="flex flex-col items-center p-4 bg-yellow-50 rounded-xl">
+                    <BsEmojiSmile className="text-4xl text-yellow-500 mb-2" />
+                    <span className="font-medium text-yellow-700">Happy</span>
+                    <span className="text-yellow-600">{sentimentData.happy}</span>
+                  </div>
+                  <div className="flex flex-col items-center p-4 bg-red-50 rounded-xl">
+                    <BsEmojiAngry className="text-4xl text-red-500 mb-2" />
+                    <span className="font-medium text-red-700">Angry</span>
+                    <span className="text-red-600">{sentimentData.angry}</span>
+                  </div>
+                  <div className="flex flex-col items-center p-4 bg-blue-50 rounded-xl">
+                    <BsEmojiNeutral className="text-4xl text-blue-500 mb-2" />
+                    <span className="font-medium text-blue-700">Neutral</span>
+                    <span className="text-blue-600">{sentimentData.neutral}</span>
+                  </div>
+                  <div className="flex flex-col items-center p-4 bg-gray-50 rounded-xl">
+                    <BsEmojiFrown className="text-4xl text-gray-500 mb-2" />
+                    <span className="font-medium text-gray-700">Sad</span>
+                    <span className="text-gray-600">{sentimentData.sad}</span>
+                  </div>
+                  <div className="flex flex-col items-center p-4 bg-purple-50 rounded-xl">
+                    <BsEmojiSurprise className="text-4xl text-purple-500 mb-2" />
+                    <span className="font-medium text-purple-700">Surprise</span>
+                    <span className="text-purple-600">{sentimentData.surprise}</span>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-2">
+                    Dominant Emotion
+                  </h4>
+                  <p className="text-2xl font-bold text-blue-600 capitalize">
+                    {getDominantEmotion()}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <input
+          ref={sentimentVideoRef}
+          type="file"
+          accept="video/*"
+          onChange={handleSentimentSelect}
+          className="hidden"
+        />
+      </div>
+    </div>
+  );
+
+  const handleAudioDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setAudioDragActive(true);
+    } else if (e.type === "dragleave") {
+      setAudioDragActive(false);
+    }
+  };
+
+  const handleAudioFile = (file: File) => {
+    if (!file.type.startsWith('video/')) {
+      alert('Please upload only video files for audio analysis');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setAudioFile({
+      url,
+      type: 'video',
+      file
+    });
+  };
+
+  const handleAudioDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAudioDragActive(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleAudioFile(file);
+  };
+
+  const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleAudioFile(file);
+  };
+
+  const analyzeAudio = async () => {
+    if (!audioFile) return;
+    setAnalyzingAudio(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('video', audioFile.file);
+
+      const response = await axios.post('http://127.0.0.1:5000/analyze_audio', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const [metrics, faceDetectionRate] = response.data;
+      setAudioData({
+        metrics,
+        faceDetectionRate
+      });
+    } catch (error) {
+      console.error('Error analyzing audio:', error);
+      alert('Error analyzing audio-video sync. Please try again.');
+    } finally {
+      setAnalyzingAudio(false);
+    }
+  };
+
+  const renderAudioSection = () => (
+    <div className="mt-12 max-w-4xl mx-auto">
+      <div className="bg-white rounded-2xl p-8 shadow-lg">
+        <h2 className="text-2xl font-bold text-blue-600 mb-6 flex items-center gap-2">
+          <MdWaves className="text-2xl" />
+          Audio-Video Sync Analysis
+        </h2>
+
+        {!audioFile ? (
+          <div 
+            className={`
+              border-2 border-dashed rounded-xl p-8
+              ${audioDragActive ? 'border-blue-500 bg-blue-50' : 'border-blue-200'}
+              transition-all duration-300 ease-in-out
+              hover:border-blue-400 hover:bg-blue-50/50
+            `}
+            onDragEnter={handleAudioDrag}
+            onDragLeave={handleAudioDrag}
+            onDragOver={handleAudioDrag}
+            onDrop={handleAudioDrop}
+          >
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="p-4 bg-blue-50 rounded-full">
+                <BsMic size="2.5rem" className="text-blue-500" />
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-semibold text-gray-700">
+                  Upload Video for Audio Analysis
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  We'll analyze the audio-video synchronization
+                </p>
+              </div>
+              <button
+                onClick={() => audioVideoRef.current?.click()}
+                className="px-6 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+              >
+                Select Video
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-700">Video Preview</h3>
+              <button 
+                onClick={() => {
+                  URL.revokeObjectURL(audioFile.url);
+                  setAudioFile(null);
+                  setAudioData(null);
+                }}
+                className="p-2 hover:bg-red-50 rounded-full transition-colors"
+              >
+                <BsTrash size="1.25rem" className="text-red-500" />
+              </button>
+            </div>
+
+            <video 
+              src={audioFile.url} 
+              controls 
+              className="w-full rounded-lg"
+            />
+
+            {!audioData && (
+              <button
+                onClick={analyzeAudio}
+                disabled={analyzingAudio}
+                className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors"
+              >
+                {analyzingAudio ? 'Analyzing...' : 'Check Audio-Video Sync'}
+              </button>
+            )}
+
+            {audioData && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Face Detection Rate</h4>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-bold text-blue-600">
+                        {(audioData.faceDetectionRate * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Mismatch Score</h4>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-bold text-blue-600">
+                        {audioData.metrics.mismatch_score.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <h4 className="text-sm font-medium text-gray-600 mb-1">Cosine Similarity</h4>
+                    <span className="text-lg font-semibold text-gray-800">
+                      {audioData.metrics.cosine_similarity.toFixed(3)}
+                    </span>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <h4 className="text-sm font-medium text-gray-600 mb-1">Euclidean Distance</h4>
+                    <span className="text-lg font-semibold text-gray-800">
+                      {audioData.metrics.euclidean_distance.toFixed(3)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-2">Analysis Summary</h4>
+                  <p className="text-gray-600">
+                    {audioData.metrics.mismatch_score > 0.8 
+                      ? "High probability of audio-video mismatch detected. The audio may have been manipulated."
+                      : audioData.metrics.mismatch_score > 0.5
+                      ? "Moderate signs of audio-video inconsistency found. Further verification recommended."
+                      : "Good audio-video synchronization detected. The content appears authentic."}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <input
+          ref={audioVideoRef}
+          type="file"
+          accept="video/*"
+          onChange={handleAudioSelect}
+          className="hidden"
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-8">
       <h1 className="text-4xl font-bold text-blue-600 mb-6 text-center">
@@ -701,14 +1120,7 @@ const DashboardPage = () => {
                   <span className="text-sm text-gray-500 mt-1">MP4, MOV, AVI</span>
                 </div>
 
-                <div 
-                  onClick={() => audioInputRef.current?.click()}
-                  className="flex flex-col items-center p-8 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all cursor-pointer border border-blue-100 hover:border-blue-300"
-                >
-                  <BsMic size="2.5rem" color="#2563EB" />
-                  <span className="mt-3 text-lg font-medium text-blue-600">Audio</span>
-                  <span className="text-sm text-gray-500 mt-1">MP3, WAV, AAC</span>
-                </div>
+                
               </div>
             </div>
           </div>
@@ -795,6 +1207,8 @@ const DashboardPage = () => {
           </p>
         </div>
       </div>
+      {renderAudioSection()}
+      {renderSentimentSection()}
     </div>
   );
 };

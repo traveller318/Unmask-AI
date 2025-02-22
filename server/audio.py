@@ -3,7 +3,7 @@
 import os
 import numpy as np
 import librosa
-from moviepy.editor import VideoFileClip
+from moviepy import VideoFileClip
 from transformers import Wav2Vec2Processor, Wav2Vec2Model
 import torch
 import mediapipe as mp
