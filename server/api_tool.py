@@ -31,7 +31,7 @@ model = Meso4(
     weights_path=r'C:\Users\Harshal Shah\Documents\Coding\Web Dev\projects\hackanova\Deepfake-detection\models\Meso4_DF.weights.h5'
 )
 
-@app.route('/predict_url', methods=['POST'])
+@app.route('/api/results', methods=['POST'])
 def predict_url():
     data = request.json
     url = data.get('url')

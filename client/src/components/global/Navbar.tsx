@@ -66,6 +66,10 @@ const NavItems: NavItem[] = [
     dropdownItems: [],
   },
   {
+    title: "API",
+    dropdownItems: [],
+  },
+  {
     title: "For Developers",
     dropdownItems: [],
   },
@@ -112,6 +116,7 @@ export default function Navbar() {
             <NavLink href="/product">Product</NavLink>
             <NavLink href="/resources">Resources</NavLink>
             <NavLink href="/pricing">Pricing</NavLink>
+            <NavLink href="/api_page">API</NavLink>
             <NavLink href="/customers">Customers</NavLink>
             <NavLink href="/blog">Blog</NavLink>
             <NavLink href="/contact">Contact</NavLink>
