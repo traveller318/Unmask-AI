@@ -14,10 +14,8 @@ import mediapipe as mp
 import matplotlib.pyplot as plt
 import json
 
-# pip install torch torchvision opencv-python matplotlib facenet-pytorch moviepy librosa transformers mediapipe  --pip install this
 
 
-# Set device to GPU if available, otherwise use CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 

@@ -142,7 +142,6 @@ export default function Navbar() {
   );
 }
 
-// NavLink component for consistent styling
 function NavLink({
   href,
   children,

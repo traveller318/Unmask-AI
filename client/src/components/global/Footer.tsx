@@ -54,10 +54,10 @@ export const Footer = () => {
             <h4 className="font-semibold text-gray-800 mb-4">Contact</h4>
             <ul className="space-y-3">
               <li className="text-gray-600">
-                Email: hello@alphawaveai.com
+                Email: hello@unmaskai.com
               </li>
               <li className="text-gray-600">
-                Support: support@alphawaveai.com
+                Support: support@unmaskai.com
               </li>
               <li>
                 <Button 
@@ -78,7 +78,7 @@ export const Footer = () => {
         <div className="mt-16 pt-8 border-t border-blue-50">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-600 text-sm">
-              © 2024 AlphaWave. All rights reserved.
+              © 2024 Unmask AI. All rights reserved.
             </p>
             <div className="flex gap-6">
               <Link 

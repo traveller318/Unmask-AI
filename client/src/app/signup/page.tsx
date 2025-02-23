@@ -61,7 +61,6 @@ const Signup = () => {
       if (result.error) {
         setError(result.error);
       } else if (result.url) {
-        // Redirect to the GitHub OAuth page
         window.location.href = result.url;
       }
     } catch (err) {
@@ -78,7 +77,6 @@ const Signup = () => {
       if (result.error) {
         setError(result.error);
       } else if (result.url) {
-        // Redirect to the Google OAuth page
         window.location.href = result.url;
       }
     } catch (err) {
@@ -88,7 +86,6 @@ const Signup = () => {
     }
   };
 
-  // Show error message if present in URL
   useEffect(() => {
     const message = searchParams.get('message');
     if (message) setError(message);

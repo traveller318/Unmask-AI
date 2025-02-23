@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // DOM Elements
   const analyzeButton = document.getElementById('start-recording');
   const uploadButton = document.getElementById('file-upload');
   const submitButton = document.getElementById('submit-button');
@@ -11,13 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let recordedChunks = [];
   let selectedFile;
 
-  // Ensure elements exist before attaching event listeners
   if (!analyzeButton || !uploadButton || !submitButton) {
     console.error('Required DOM elements are missing.');
     return;
   }
 
-  // Analyze Button Click Handler
   analyzeButton.addEventListener('click', async () => {
     if (isRecording) {
       stopRecording();
@@ -48,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
   });
 
-  // Start Screen Recording
   async function startScreenRecording() {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -63,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Start Recording with MediaRecorder
   function startRecording(stream) {
     mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
     recordedChunks = [];
@@ -93,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
   }
 
-  // Stop Recording
   function stopRecording() {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
@@ -101,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
     resetButton();
   }
 
-  // Reset Analyze Button State
   function resetButton() {
     isRecording = false;
     analyzeButton.classList.remove('analyzing');
@@ -115,7 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
 
-  // Save Recorded Video
   function saveRecording() {
     const blob = new Blob(recordedChunks, { type: "video/webm" });
     const url = URL.createObjectURL(blob);
@@ -130,11 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
     URL.revokeObjectURL(url);
   }
 
-  // Show Analysis Results
   function showAnalysis() {
     analysisResults.style.display = 'block';
 
-    // Fixed metrics values for demonstration
     const metrics = {
       confidence: 87,
       faceDistortion: 78,
@@ -143,23 +133,19 @@ document.addEventListener('DOMContentLoaded', () => {
       audioVideo: 85,
     };
 
-    // Update UI with analysis results
     document.getElementById('confidence-value').textContent = `${metrics.confidence}%`;
     document.getElementById('confidence-progress').style.width = `${metrics.confidence}%`;
 
-    // Update metric values
     document.querySelector('.metrics-container .metric:nth-child(1) .value').textContent = `${metrics.faceDistortion}%`;
     document.querySelector('.metrics-container .metric:nth-child(2) .value').textContent = `${metrics.lipSync}%`;
     document.querySelector('.metrics-container .metric:nth-child(3) .value').textContent = `${metrics.frameConsistency}%`;
     document.querySelector('.metrics-container .metric:nth-child(4) .value').textContent = `${metrics.audioVideo}%`;
 
-    // Show risk alert for high confidence
     if (metrics.confidence > 75) {
       highRiskAlert.classList.remove('hidden');
     }
   }
 
-  // File Upload Handling
   uploadButton.addEventListener('change', (event) => {
     selectedFile = event.target.files[0];
     if (selectedFile) {
@@ -169,7 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
   });
 
-  // Submit Button Click Handler
   submitButton.addEventListener('click', async () => {
     if (!selectedFile) {
       alert('Please select a file first.');
@@ -185,7 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-   // Display Analysis Results on the Frontend
    function displayAnalysisResults(data) {
     console.log("entered");
     
@@ -195,19 +179,15 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
   
-    // Clear existing metrics
     metricsContainer.innerHTML = '';
   
-    // Validate data structure
     if (!Array.isArray(data) || data.length < 1) {
       console.error('Invalid data format:', data);
       return;
     }
   
-    // Extract relevant data from the first element of the array
     const { cosine_similarity, euclidean_distance, mismatch_score } = data[0];
   
-    // Validate individual fields
     if (
       typeof cosine_similarity === 'undefined' ||
       typeof euclidean_distance === 'undefined' ||
@@ -217,14 +197,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
   
-    // Create and append new metrics
     const metrics = [
       { label: 'Cosine Similarity', value: cosine_similarity.toFixed(4), color: '#3b82f6' },
       { label: 'Euclidean Distance', value: euclidean_distance.toFixed(4), color: '#ef4444' },
       { label: 'Mismatch Score', value: mismatch_score.toFixed(4), color: '#facc15' },
     ];
   
-    // Add the second value from the array (if it exists)
     if (data.length > 1 && typeof data[1] === 'number') {
       metrics.push({ label: 'Confidence Score', value: data[1].toFixed(4), color: '#10b981' });
     }
@@ -248,7 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
       metricsContainer.appendChild(metricDiv);
     });
   }
-  // Upload File to Backend
   async function uploadFileToBackend(file) {
     const formData = new FormData();
     formData.append('video', file);

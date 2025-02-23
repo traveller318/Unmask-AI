@@ -1,4 +1,3 @@
-# analyze_video.py
 
 import os
 import numpy as np
@@ -11,13 +10,11 @@ import cv2
 import matplotlib.pyplot as plt
 import json
 
-# Cell 3: Define function to extract audio from video
 def extract_audio(video_path, output_audio_path="temp_audio.wav"):
     video = VideoFileClip(video_path)
     video.audio.write_audiofile(output_audio_path, codec='pcm_s16le')
     return output_audio_path
 
-# Cell 4: Define function to process audio using Wav2Vec2
 def process_audio(audio_path):
     processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
     model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h")
@@ -28,7 +25,6 @@ def process_audio(audio_path):
     audio_embeddings = outputs.last_hidden_state.mean(dim=1).squeeze().numpy()
     return audio_embeddings
 
-# Cell 5: Define function to extract visual features (lip movements)
 def extract_visual_features(video_path):
     mp_face_mesh = mp.solutions.face_mesh
     face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1)
@@ -51,21 +47,16 @@ def extract_visual_features(video_path):
     face_detection_rate = face_detection_success / len(frames)
     return visual_embeddings, face_detection_rate
 
-# Cell 6: Define function to compute mismatch metrics
 def compute_mismatch_metrics(audio_embeddings, visual_embeddings):
-    # Normalize embeddings
     audio_embeddings = audio_embeddings / np.linalg.norm(audio_embeddings)
-    # Pad visual embeddings to match audio embeddings size
     padded_visual_embeddings = np.pad(
         visual_embeddings,
         (0, audio_embeddings.shape[0] - visual_embeddings.shape[0]),
         mode='constant'
     )
     padded_visual_embeddings = padded_visual_embeddings / np.linalg.norm(padded_visual_embeddings)
-    # Compute cosine similarity
     cosine_similarity = np.dot(audio_embeddings, padded_visual_embeddings)
     mismatch_score = 1 - cosine_similarity
-    # Compute Euclidean distance
     euclidean_distance = np.linalg.norm(audio_embeddings - padded_visual_embeddings)
     return {
         "cosine_similarity": cosine_similarity,
@@ -73,7 +64,6 @@ def compute_mismatch_metrics(audio_embeddings, visual_embeddings):
         "euclidean_distance": euclidean_distance
     }
 
-# Cell 7: Main function to analyze video
 def analyze_video(video_path):
     # Step 1: Extract audio from video
     audio_path = extract_audio(video_path)

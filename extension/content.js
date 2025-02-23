@@ -32,7 +32,6 @@ function stopRecording() {
 function saveRecording() {
   const blob = new Blob(recordedChunks, { type: "video/webm" });
   
-  // Send the blob to background script for download
   const reader = new FileReader();
   reader.onload = () => {
     const buffer = reader.result;
@@ -46,7 +45,6 @@ function saveRecording() {
   };
   reader.readAsDataURL(blob);
   
-  // Clear the recorded chunks
   recordedChunks = [];
 }
 

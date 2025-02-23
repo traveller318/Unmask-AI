@@ -1,4 +1,3 @@
-# pip install torch torchvision opencv-python facenet-pytorch
 
 import torch
 import torchvision.models as models
@@ -10,14 +9,11 @@ import os
 import json
 from torchvision import transforms
 
-# Set device to GPU if available, otherwise use CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 
-# Load MTCNN for face detection
 mtcnn = MTCNN(keep_all=True, device=device)
 
-# Load a pre-trained MobileNetV2 model for deepfake detection
 mobilenet_model = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=True).to(device)
 mobilenet_model.eval()
 

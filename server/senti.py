@@ -9,7 +9,6 @@ from moviepy import VideoFileClip
 import numpy as np
 import json
 
-# Function to install required libraries if not installed
 def install_packages():
     packages = ["deepface", "opencv-python", "moviepy"]
     try:
@@ -17,18 +16,15 @@ def install_packages():
     except subprocess.CalledProcessError as e:
         print(f"Error installing packages: {e}")
 
-# Install required packages
 install_packages()
 
-# Function to analyze sentiment from video frames
 def analyze_video_sentiment(video_path):
     """
     Analyzes sentiment from facial expressions in a video.
     """
     try:
-        # Load the video
         video = VideoFileClip(video_path)
-        fps = video.fps  # Frames per second
+        fps = video.fps  
         total_frames = int(video.fps * video.duration)  # Total number of frames
         
         print(f"Video loaded: {video.duration} seconds at {fps} FPS ({total_frames} total frames).")
