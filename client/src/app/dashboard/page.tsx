@@ -10,7 +10,6 @@ import jsPDF from 'jspdf';
 import axios from 'axios';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-
 interface FilePreview {
   url: string;
   type: 'image' | 'video' | 'audio';
@@ -96,6 +95,29 @@ const formatPercentage = (value: number): number => {
   return Number(value.toFixed(2));
 };
 
+const generateFallbackInsights = (metrics: DeepfakeMetrics): DetailedInsight[] => [
+    {
+        title: 'Overall Analysis',
+        description: `Image analysis shows ${metrics.distortionScore}% distortion score`,
+        severity: metrics.distortionScore > 70 ? 'high' : 'medium'
+    },
+    {
+        title: 'Facial Features',
+        description: `Jaw symmetry: ${metrics.jawSymmetry}%, Eye symmetry: ${metrics.eyeSymmetry}%`,
+        severity: metrics.jawSymmetry > 70 ? 'high' : 'low'
+    },
+    {
+        title: 'Background Analysis',
+        description: `Background obstruction score: ${metrics.backgroundObstruction}%`,
+        severity: metrics.backgroundObstruction > 70 ? 'high' : 'low'
+    },
+    {
+        title: 'Overall Risk',
+        description: 'Combined analysis of all metrics indicates potential manipulation',
+        severity: 'medium'
+    }
+];
+
 const DashboardPage = () => {
   const [dragActive, setDragActive] = useState(false);
   const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
@@ -172,38 +194,69 @@ const DashboardPage = () => {
     if (file) handleFile(file);
   };
 
-  const handleSubmit = async () => {
-    if (!filePreview) return;
+  const handleImageSubmit = async () => {
+    if (!filePreview || filePreview.type !== 'image') return;
+    setIsAnalyzing(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', filePreview.file);
+
+      console.log('Image Analysis Request:', {
+        fileName: filePreview.file.name,
+        fileSize: `${(filePreview.file.size / (1024 * 1024)).toFixed(2)} MB`,
+        endpoint: 'http://127.0.0.1:5000/predict'
+      });
+
+      const response = await axios.post('http://127.0.0.1:5000/predict', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const faceData = response.data.face_distortion?.[0] || {};
+      const imageMetrics: DeepfakeMetrics = {
+        distortionScore: Number((faceData.distortion_score || 0).toFixed(2)),
+        jawSymmetry: Number((faceData.jaw_symmetry || 0).toFixed(2)),
+        eyeSymmetry: Number((faceData.eye_symmetry || 0).toFixed(2)),
+        backgroundObstruction: Number((response.data.best_score || 0).toFixed(2))
+      };
+
+      setMetrics(imageMetrics);
+      await generateGeminiInsights(imageMetrics);
+      setAnalysisComplete(true);
+
+    } catch (error) {
+      handleError(error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleVideoSubmit = async () => {
+    if (!filePreview || filePreview.type !== 'video') return;
     setIsAnalyzing(true);
 
     try {
         const formData = new FormData();
-        formData.append('video', filePreview.file); // Change 'file' to 'video'
+        formData.append('video', filePreview.file);
 
-        // Add file size check
-        const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB max file size
-        if (filePreview.file.size > MAX_FILE_SIZE) {
-            alert('File size too large. Please upload a video smaller than 16MB.');
-            setIsAnalyzing(false);
-            return;
-        }
-
-        const endpoint = filePreview.type === 'image' 
-            ? 'http://127.0.0.1:5000/predict'
-            : 'http://127.0.0.1:5000/process_video';
-
-        console.log('Starting analysis of:', filePreview.file.name);
-        console.log('File size:', (filePreview.file.size / (1024 * 1024)).toFixed(2), 'MB');
-
-        const response = await axios.post(endpoint, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-            timeout: 300000, // 5 minutes
+        console.log('Video Analysis Request:', {
+            fileName: filePreview.file.name,
+            fileSize: `${(filePreview.file.size / (1024 * 1024)).toFixed(2)} MB`,
+            endpoint: 'http://127.0.0.1:5000/process_video'
         });
 
-        console.log('Analysis response:', response.data);
-        setVideoAnalysis(response.data);
+        const response = await fetch('http://127.0.0.1:5000/process_video', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Video Analysis Response:', data);
+        setVideoAnalysis(data);
         setAnalysisComplete(true);
 
     } catch (error) {
@@ -212,7 +265,87 @@ const DashboardPage = () => {
     } finally {
         setIsAnalyzing(false);
     }
-};
+  };
+
+  const generateGeminiInsights = async (imageMetrics: DeepfakeMetrics) => {
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const prompt = `
+        Analyze these deepfake detection metrics and provide insights:
+        - Distortion Score: ${imageMetrics.distortionScore}%
+        - Jaw Symmetry: ${imageMetrics.jawSymmetry}%
+        - Eye Symmetry: ${imageMetrics.eyeSymmetry}%
+        - Background Obstruction: ${imageMetrics.backgroundObstruction}%
+
+        Provide 4 insights in this exact JSON format:
+        [
+          {
+            "title": "Insight title",
+            "description": "Detailed explanation",
+            "severity": "high/medium/low"
+          }
+        ]
+      `;
+
+      const result = await model.generateContent(prompt);
+      const geminiResponse = await result.response;
+      const text = geminiResponse.text();
+      
+      try {
+        const cleanedText = text.trim().replace(/```json|```/g, '').trim();
+        const parsedInsights = JSON.parse(cleanedText);
+        
+        if (Array.isArray(parsedInsights)) {
+          setInsights(parsedInsights.map(insight => ({
+            title: insight.title || '',
+            description: insight.description || '',
+            severity: insight.severity as 'high' | 'medium' | 'low' || 'low'
+          })));
+        }
+      } catch (parseError) {
+        console.error('Error parsing Gemini response:', parseError);
+        setInsights(generateFallbackInsights(imageMetrics));
+      }
+    } catch (geminiError) {
+      console.error('Error getting Gemini insights:', geminiError);
+      setInsights(generateFallbackInsights(imageMetrics));
+    }
+  };
+
+  const handleError = (error: any) => {
+    console.error('Request Error:', error);
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        console.error('Error Response:', error.response.data);
+        console.error('Error Status:', error.response.status);
+        alert(`Server Error: ${error.response.status} - ${error.response.data.message || 'Unknown error'}`);
+      } else if (error.request) {
+        console.error('No Response Received');
+        alert('No response received from server. Please check if the server is running.');
+      } else {
+        console.error('Request Setup Error:', error.message);
+        alert('Error setting up the request: ' + error.message);
+      }
+    } else {
+      console.error('Non-Axios Error:', error);
+      alert('An unexpected error occurred');
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!filePreview) return;
+
+    switch (filePreview.type) {
+      case 'image':
+        await handleImageSubmit();
+        break;
+      case 'video':
+        await handleVideoSubmit();
+        break;
+      default:
+        alert('Unsupported file type');
+    }
+  };
 
   const generateReport = async () => {
     if (!videoAnalysis) return;
@@ -895,7 +1028,7 @@ const DashboardPage = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 bg-gray-50 rounded-xl">
-                    <h4 className="text-sm font-medium text-gray-600 mb-1">Cosine Similarity</h4>
+                    <h4 className="text-sm font-medium text-gray-600 mb-1">Cosine Similarity-Detect inconsistencies between real and manipulated images or videos</h4>
                     <span className="text-lg font-semibold text-gray-800">
                       {audioData.metrics.cosine_similarity.toFixed(3)}
                     </span>
@@ -1303,7 +1436,6 @@ const DashboardPage = () => {
   const renderVideoAnalysis = () => (
     <div className="space-y-8">
       <div className="bg-white rounded-3xl p-10 shadow-2xl border border-blue-100">
-        {/* Header Section with Report Button */}
         <div className="flex items-center justify-between mb-12">
           <div className="flex items-center gap-6">
             <div className="relative w-32 h-32">
@@ -1350,9 +1482,7 @@ const DashboardPage = () => {
           </button>
         </div>
 
-        {/* Metrics Grid */}
         <div className="grid grid-cols-3 gap-8 mb-12">
-          {/* Frame Analysis */}
           <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-lg font-medium text-gray-700">Frame Analysis</h3>
@@ -1380,7 +1510,6 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Face Detection */}
           <div className="bg-gradient-to-br from-red-50 to-white p-6 rounded-xl border border-red-100">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-lg font-medium text-gray-700">Face Analysis</h3>
@@ -1403,7 +1532,6 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Audio Sync */}
           <div className="bg-gradient-to-br from-yellow-50 to-white p-6 rounded-xl border border-yellow-100">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-lg font-medium text-gray-700">Audio Sync</h3>
@@ -1427,7 +1555,6 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Detailed Scores */}
         <div className="bg-gradient-to-r from-blue-50 to-white p-8 rounded-2xl mb-12">
           <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
             <BsShieldCheck className="text-blue-500" />
@@ -1475,7 +1602,6 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Analysis Insights */}
         <div className="space-y-6">
           <h3 className="text-xl font-bold text-gray-800 mb-4">Detailed Insights</h3>
           <div className="grid grid-cols-1 gap-4">

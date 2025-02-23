@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "../ui/button";
+import { FiDownload } from "react-icons/fi";
 
 interface SimpleDropdownItem {
   title: string;
@@ -100,36 +101,40 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16 px-6">
           {/* Logo */}
           <div className="flex-shrink-0 pr-8">
-            <Link href="/" className="flex items-center">
+            <Link href="/" className="flex items-center gap-3">
               <Image
-                src="/logo.svg?height=40&width=40"
-                alt="Logo"
+                src="/deepfake.png"
+                alt="UnMask AI Logo"
                 width={40}
                 height={40}
-                className="h-8 w-auto"
+                className="h-6 w-auto"
               />
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-600/50 bg-clip-text text-transparent">UnMask AI</span>
             </Link>
           </div>
-
+          <div className="flex items-center gap-8">
           {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-8">
-            <NavLink href="/product">Product</NavLink>
-            <NavLink href="/resources">Resources</NavLink>
-            <NavLink href="/pricing">Pricing</NavLink>
-            <NavLink href="/api_page">API</NavLink>
-            <NavLink href="/customers">Customers</NavLink>
-            <NavLink href="/blog">Blog</NavLink>
-            <NavLink href="/contact">Contact</NavLink>
-          </div>
+            <div className="">
+              <NavLink href="/"> 
+                <div className="hidden md:flex items-center gap-1">
+                  <FiDownload />
+                  Download our extension
+                </div>
+              </NavLink>
+            </div>
+            <div className="hidden md:flex items-center gap-8">
+                <NavLink href="/api_page">API</NavLink>
+            </div>
 
-          {/* Auth Buttons */}
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => router.push("/dashboard")}
-              className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Dashboard
-            </Button>
+            {/* Auth Buttons */}
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={() => router.push("/dashboard")}
+                className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Dashboard
+              </Button>
+            </div>
           </div>
         </div>
       </div>

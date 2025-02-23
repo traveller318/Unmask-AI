@@ -10,9 +10,9 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8">
           {/* Logo and Description */}
           <div className="col-span-1 md:col-span-2">
-            <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
-              AlphaWave
-            </h3>
+            
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-600/50 bg-clip-text text-transparent">UnMask AI</span>
+            
             <p className="mt-4 text-gray-600 max-w-sm">
               Enhancing digital security with real-time deepfake detection. Protecting authenticity with AI-powered solutions.
             </p>
@@ -36,7 +36,7 @@ export const Footer = () => {
           <div>
             <h4 className="font-semibold text-gray-800 mb-4">Quick Links</h4>
             <ul className="space-y-3">
-              {['Features', 'Pricing', 'Testimonials', 'FAQ'].map((item) => (
+              {['Products', 'Solutions', 'Blogs', 'Resources', 'Pricing', 'FAQ'].map((item) => (
                 <li key={item}>
                   <Link 
                     href={`#${item.toLowerCase()}`}
@@ -99,4 +99,4 @@ export const Footer = () => {
       </div>
     </footer>
   );
-}; 
+};

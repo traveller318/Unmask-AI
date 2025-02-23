@@ -19,13 +19,7 @@ import io
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app, resources={
-    r"/*": {
-        "origins": ["http://localhost:3000"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
-    }
-})
+CORS(app)  # Enable CORS for all routes
 
 # Debugging: Print when server starts
 print("🚀 Server is running at http://127.0.0.1:5000/")
@@ -299,94 +293,49 @@ def detect_deepfake():
 
     return jsonify(response)
 
-@app.route('/process_video', methods=['POST'])
+@app.route("/process_video", methods=["POST"])
 def process_video_endpoint():
     try:
-        # Check if video file is present
         if 'video' not in request.files:
-            return jsonify({'error': 'No video file uploaded'}), 400
+            return jsonify({
+                'error': 'No video file uploaded',
+                'message': 'Please upload a video file',
+                'status': 'failed'
+            }), 400
 
         video_file = request.files['video']
-        
-        # If no file selected
-        if video_file.filename == '':
-            return jsonify({'error': 'No selected file'}), 400
-
-        # Check if file type is allowed
-        if not allowed_file(video_file.filename):
-            return jsonify({'error': 'File type not allowed. Please upload MP4, AVI, MOV, or WMV files.'}), 400
-
-        # Secure the filename
-        filename = secure_filename(video_file.filename)
-        
-        # Create temporary directory if it doesn't exist
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        if not video_file:
+            return jsonify({
+                'error': 'Empty file',
+                'message': 'The uploaded file is empty',
+                'status': 'failed'
+            }), 400
 
         # Save the uploaded file temporarily
-        video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        video_file.save(video_path)
+        temp_path = os.path.join('/tmp', secure_filename(video_file.filename))
+        video_file.save(temp_path)
 
         try:
-            # Process video using our existing functions
-            face_results = detect_face_distortion(video_path)
-            frame_results = detect_frame_anomalies(video_path)
-            audio_results, face_detection_rate = analyze_video(video_path)
-
-            # Calculate overall metrics
-            total_frames = frame_results[0]
-            abnormal_frames = frame_results[1]
+            # Process the video
+            results = process_video(temp_path)
             
-            # Calculate confidence score
-            face_score = 100 * (1 - face_results[1]/face_results[0]) if face_results[0] > 0 else 0
-            frame_score = 100 * (1 - abnormal_frames/total_frames) if total_frames > 0 else 0
-            audio_score = 100 * (1 - audio_results['mismatch_score'])
-
-            confidence_score = (face_score + frame_score + audio_score) / 3
-
-            results = {
-                'total_frames_processed': total_frames,
-                'abnormal_frames_detected': abnormal_frames,
-                'distorted_faces': face_results[1],
-                'confidence_score': round(confidence_score, 2),
-                'detailed_scores': {
-                    'face_quality_score': round(face_score, 2),
-                    'frame_quality_score': round(frame_score, 2),
-                    'audio_visual_sync_score': round(audio_score, 2)
-                },
-                'mismatch_score': round(audio_results['mismatch_score'], 2),
-                'risk_level': 'High' if confidence_score < 50 else 'Medium' if confidence_score < 75 else 'Low',
-                'analysis_result': 'Likely manipulated' if confidence_score < 50 else 'Possibly authentic',
-                'score_explanation': {
-                    'face_analysis': f"Face quality score: {round(face_score, 2)}% - Based on facial distortion analysis",
-                    'frame_analysis': f"Frame quality score: {round(frame_score, 2)}% - Based on frame consistency",
-                    'audio_sync': f"Audio-visual sync score: {round(audio_score, 2)}% - Based on lip sync analysis"
-                }
-            }
+            # Check if processing failed
+            if 'error' in results:
+                return jsonify(results), 500
 
             return jsonify(results), 200
 
-        except Exception as e:
-            logging.error(f"Error processing video: {str(e)}")
-            return jsonify({
-                'error': str(e),
-                'status': 'failed',
-                'message': 'Failed to process video'
-            }), 500
-
         finally:
-            # Clean up: remove the temporary file
-            try:
-                if os.path.exists(video_path):
-                    os.remove(video_path)
-            except Exception as e:
-                logging.error(f"Error removing temporary file: {str(e)}")
+            # Clean up: remove temporary file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
     except Exception as e:
-        logging.error(f"Server error: {str(e)}")
+        print(f"Error processing video: {str(e)}")
         return jsonify({
             'error': str(e),
-            'status': 'failed',
-            'message': 'Server error occurred'
+            'message': 'Failed to process video',
+            'status': 'failed'
         }), 500
 
 # Add error handler for file too large
